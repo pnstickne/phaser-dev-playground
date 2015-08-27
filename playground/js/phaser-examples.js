@@ -1,6 +1,11 @@
-$(document).ready(function(){
+'use strict';
 
-	$.getJSON("_site/examples.json")
+jQuery(function ($){
+
+	// The URL style to generate
+	var buildExampleUrl = PhaserExamples.Common.createExampleUrl;
+
+	$.getJSON("examples/examples.json")
 
 	.done(function(data) {
 
@@ -51,12 +56,16 @@ $(document).ready(function(){
 
 			for (var e = 0; e < files.length; e++)
 			{
-				if(typeof files[e].jsbin !== 'undefined')
-				{
-					node += '<li><a href="_site/view_full.html?d=' + dir + '&amp;f=' + files[e].file + '&amp;t=' + files[e].title + '&amp;jsbin='+files[e].jsbin+'">' + files[e].title + '</a></li>';
-				}else{
-					node += '<li><a href="_site/view_full.html?d=' + dir + '&amp;f=' + files[e].file + '&amp;t=' + files[e].title + '">' + files[e].title + '</a></li>';
-				}
+				var exampleData = files[e];
+				exampleData.dir = dir;
+
+				var $link = $('<a>')
+					.attr('href', buildExampleUrl(exampleData))
+					.text(exampleData.title);
+
+				var linkHtml = $link[0].outerHTML; // Everything since FF11
+
+				node += '<li>' + linkHtml + '</li>';
 				
 	            t++;
 			}
@@ -94,18 +103,6 @@ $(document).ready(function(){
 		node += '</div>';
 
 		$("#examples-list").append(node);
-
-	});
-
-	$.getJSON("http://phaser.io/version.json")
-
-	.done(function(data) {
-
-		if (data.version !== '2.2.2')
-		{
-			$("#upgrade").append(data.version);
-			$("#upgrade").css('display', 'inline-block');
-		}
 
 	});
 

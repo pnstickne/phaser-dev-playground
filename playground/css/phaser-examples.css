@@ -23,7 +23,7 @@ ul.nav-links{ margin:0; padding:0; display: inline-block; float: right; list-sty
 ul.nav-links > li{margin:0; padding:0; list-style-type: none; padding-left: 55px;}
 ul.nav-links > li > a{color: #fff; text-decoration: none;}
 ul.nav-links > li > a:hover{text-decoration: underline;}
-.link-home, .link-latest, .link-forum, .link-docs, .link-twitter{background-image: url('../../_site/images/nav-icons.png'); background-repeat: no-repeat;}
+.link-home, .link-latest, .link-forum, .link-docs, .link-twitter{background-image: url('images/nav-icons.png'); background-repeat: no-repeat;}
 
 .main-title{font-family: 'HelveticaBd', Helvetica, Arial;font-size:55px;color:#fff;text-shadow:0 0 15px #b643e6; text-align: center; display: block; margin: 40px auto 0 auto;}
 .link-home{background-position: 0 -9px;}
@@ -31,11 +31,11 @@ ul.nav-links > li > a:hover{text-decoration: underline;}
 .link-forum{background-position: 0 -67px;}
 .link-docs{background-position: 0 -97px;}
 .link-twitter{background-position: 0 -127px;}
-.phaser-examples{background: url('../../_site/images/phaser-examples.png') no-repeat; display: block; width: 485px; height: 205px; margin: 20px auto;}
+.phaser-examples{background: url('images/phaser-examples.png') no-repeat; display: block; width: 485px; height: 205px; margin: 20px auto;}
 .phaser-version{float: right; background: url('../../_site/images/phaser-version.png') no-repeat; display: block; width: 358px; height: 30px; color: #fff; font-size: 11px; text-shadow: 1px 1px #000; right:0; top:0; }
 .phaser-version > span{margin-top: 10px; display: inline-block; margin-left: 60px; margin-right: 25px;}
 .phaser-version > a:hover{text-decoration: underline;}
-.phaser-logo{display: block; float: right; width: 168px;height: 144px; background: url('../../_site/images/phaser-logo.png') no-repeat; margin-top: 40px; margin-right: 40px;}
+.phaser-logo{display: block; float: right; width: 168px;height: 144px; background: url('images/phaser-logo.png') no-repeat; margin-top: 40px; margin-right: 40px;}
 
 #upgrade {
   display: none;
