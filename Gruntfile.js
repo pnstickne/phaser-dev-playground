@@ -1,34 +1,72 @@
+var util = require('util');
+var path = require('path');
+
 module.exports = function (grunt) {
 
-    grunt.loadNpmTasks('grunt-contrib-connect');
+    function valid_example_path(path) {
 
-    grunt.loadTasks('./tasks');
+      var fs = require('fs');
+      try {
+        var stats = fs.lstatSync(path + '/examples');
+
+        if (stats.isDirectory()) {
+          return true;
+	}
+      }
+      catch (e) {
+        return false;
+      }
+
+    }
+
+
+    grunt.config('example-path',
+        grunt.option('example-path') || process.env.EXAMPLE_PATH || '../phaser-examples');
+
+    if (!valid_example_path(grunt.config('example-path')))
+    {
+	grunt.fail.warn(
+	  util.format('"%s" does not appear to be a valid phaser-example repository.', grunt.config('example-path')));
+
+    }
+
+    grunt.loadNpmTasks('grunt-env');
+    grunt.loadNpmTasks('grunt-express-server');
+    grunt.loadNpmTasks('grunt-contrib-watch');
+
+//    grunt.loadTasks('./tasks');
 
     grunt.initConfig({
 
-        examples: {
-            all: {
-            options: {
-                base: 'examples',
-                excludes: ['_site', 'assets', 'states', 'wip']
-            },
-            src: ['examples/**/*.js'],
-            dest: 'examples/_site/examples.json'
+        env: {
+	   dev: {
+	    EXAMPLE_PATH: path.resolve(grunt.config('example-path'))
+	    }
+	},
+
+	express: {
+            dev: {
+	      options: {
+	        script: 'playground/server.js'
+		}
             }
         },
 
-        connect: {
-            root: {
-                options: {
-                    keepalive: true,
-                    hostname: '*',
-                    port: 8001
-                }
-            }
-        }
+	watch: {
+	    express: {
+	          files:  [
+		  	'**/*.js',
+			grunt.config('example-path') + '/**/*.js'
+		  ],
+		        tasks:  [ 'express' ],
+			      options: {
+			              spawn: false  
+				            }
+					        }
+						  }
 
     });
 
-    grunt.registerTask('default', ['examples']);
+    grunt.registerTask('default', ['env', 'express', 'watch'])
 
 };

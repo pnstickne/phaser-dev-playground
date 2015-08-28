@@ -4,14 +4,42 @@
         <meta charset="UTF-8" />
         <title>phaser</title>
         <base href="../"></base>
-        <script src="_site/js/jquery-2.0.3.min.js" type="text/javascript"></script>
-        <script src="_site/js/purl.js" type="text/javascript"></script>
-        <script src="_site/js/gamecontroller.js" type="text/javascript"></script>
-        <script src="_site/js/phaser-viewer.js" type="text/javascript"></script>
-        <link href="_site/css/phaser-examples.css" media="screen" rel="stylesheet" type="text/css">
-        <link href="_site/css/desert.css" rel="stylesheet" type="text/css">
+        <script src="js/jquery-2.1.4.js"></script>
+        <script src="js/purl.js"></script>
+        <script src="js/gamecontroller.js"></script>
+        <script src="js/phaser-examples-common.js"></script>
+        <script src="js/phaser-viewer.js" ></script>
+        <link href="css/phaser-examples.css" media="screen" rel="stylesheet" type="text/css">
+        <link href="css/desert.css" rel="stylesheet" type="text/css">
+
+
+        <script src="js/diff_match_patch.js"></script>
+        <script src="js/codemirror.js"></script>
+        <script src="js/codemirror-javascript.js"></script>
+        <link rel="stylesheet" href="css/codemirror.css">
     </head>
     <body>
+
+    <script>
+    	// Phaser is loaded immediately and synchronously
+    	;(function () {
+	    	var query = location.search.substr(1);
+		    var m = query.match(/\bv=(.*?)_(.*?)?(?:&|$)/);
+            var name = (m && m[1]) || 'master';
+		    var sha = (m && m[2]) || name;
+		    //var phaserUrl = "https://cdn.rawgit.com/photonstorm/phaser/" + sha + "/build/phaser.js?" + name;
+            var phaserUrl = "phaser/phaser-" + name + ".js";
+		    document.write("<script src='" + phaserUrl + "'></" + "script>");
+            debugger;
+	    })();
+    </script>
+
+    <script>
+        // setTimeout(function () {
+        //     $(document.body).append(
+        //         $("<script src=_site/js/phaser-debug.js><"+"/script>"));
+        // }, 2000);
+    </script>
 
         <div class="header">
             <div class="box100 no-padding">
@@ -33,8 +61,20 @@
                     <div class="phaser-logo"></div>
                 </div>
             </div>
+            <div class="line">
+                <div class="box20">
+                </div>
+                <div class="box60 txt-center">
+                    <span id="description"></span>
+                    <br/>
+                    <span id="instructions"></span>
+                </div>
+                <div class="box20">
+                </div>
+            </div>
             <div class="game-panel centered">
-                <div id="phaser-example"></div>
+                <div id="phaser-example">
+                </div>
                 <div class="game-controls">
                     <ul class="left-controls">
                         <li class="controls-label"></li>
@@ -55,36 +95,14 @@
 
         <div class="clear filler"></div>
         <p class="centered px800">Source code:</p>
-        <pre id="sourcecode" class="code-block centered prettyprint"></pre>
-
+        <pre id="sourcecode" class="code-block centered prettyprint" style="display:none"></pre>
+        <textarea id="livecode" class="code-block centered"></textarea>
+        <button id="livecode-run" class="centered">Run Code (Ctrl-Enter)</button>
+        <button id="livecode-reset" class="centered">Discard Edits (Ctrl-R)</button>
         <div class="clear"></div>
         <div id="footer" class="footer">
 
             <div class="main-container centered">
-                <div class="prize-bg">
-                  <a href="http://www.html5gamedevs.com/topic/1813-the-monthly-phaser-examples-contest/" class="prize-button">View details &amp; submit</a>
-                </div>
-                <div class="line">
-                    <div class="box20">
-                        <a href="http://www.photonstorm.com" class="photonstorm-logo"></a>
-                        &copy; 2014 Photon Storm Ltd.<br/>
-                        All rights reserved.
-                    </div>
-                    <div class="box5">
-                        <div class="flixel-logo"></div>
-                    </div>
-                    <div class="box15">
-                        Looking for a flash game framework?<br/>
-                        <a href="http://flixel.org">Try Flixel</a>
-                    </div>
-                    <div class="box55 float-right">
-                        <ul class="footer-links">
-                            <li><a class="github-icon" href="https://github.com/photonstorm/phaser">Phaser on Github</a></li>
-                            <li><a class="twitter-icon" href="https://twitter.com/photonstorm">@photonstorm</a></li>
-                            <li><a class="forums-icon" href="http://www.html5gamedevs.com/forum/14-phaser/">Phaser Forums</a></li>
-                        </ul>
-                    </div>
-                </div>
             </div>
         </div>
     </body>

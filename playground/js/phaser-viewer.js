@@ -11,8 +11,7 @@ jQuery(function ($) {
 	var jsbin = exampleData.jsbin;
 	var requestedVersion = exampleData.version || defaultVersionTag;
 
-	// No "local" on examples.phaser.io
-	var isLocal = !this.location.host.match(/phaser\.io/);
+	var isLocal = true;
 
 	var exampleBaseUrl = PhaserExamples.Common.getExampleBaseUrl();
 
@@ -72,7 +71,7 @@ jQuery(function ($) {
 	}
 
 	// List the found Phaser versions/tags
-	function displayPhaserVersionSelection (tags, activeTag) {
+	function displayPhaserVersionSelection (versions, activeTag) {
 
 		var $element = $('.phaser-version');
 		var $dropdown = $("<select></select>").on('change', function() {
@@ -80,10 +79,10 @@ jQuery(function ($) {
 		});
 		$element.append($dropdown);
 		$dropdown.append($("<option></option>").text("Select a version"));
-		$.each(tags, function (codeKey, tag) {
+		$.each(versions, function (codeKey, version) {
 			var option = $("<option></option>")
-				.attr("value", tag)
-				.text(tag);
+				.attr("value", version.name + "_" + version.sha)
+				.text(version.name);
 			$dropdown.append(option);
 		});
 
@@ -91,36 +90,22 @@ jQuery(function ($) {
 
 	}
 
-	function getVersionTags (isLocal) {
+	function getVersions () {
 		var dfd = new $.Deferred();
 
 		// Gets a list of git tags, i.e Phaser.js versions and creates a dropdown for them. 
 		// on selecting the page will reload and load the select version of github.
-		$.get("https://api.github.com/repos/photonstorm/phaser/git/refs/tags")
+		$.get("phaser/versions")
 			.done(function( data ) {
-				var tags = ['master', 'dev'];
-				if (isLocal) {
-					tags.push(localTagName);
-				}
-
-				var i = data.length;
-				while (i--) {
-					if (data[i]['ref']) {
-						tags.push(data[i]['ref'].replace('refs/tags/',''))
-					} else {
-						tags.push('??');
-					}
-				}
-
-				dfd.resolve(tags);
+				dfd.resolve(data.versions);
 			});
 
 		return dfd;
 	};
 
-	getVersionTags(isLocal)
-		.done(function (tags) {
-			displayPhaserVersionSelection(tags, requestedVersion);
+	getVersions()
+		.done(function (versions) {
+			displayPhaserVersionSelection(versions, requestedVersion);
 		});
 
 	// Semi-replacement for $.getScript - but it supplies different
@@ -181,6 +166,13 @@ jQuery(function ($) {
 
 	// Load a specific (remote) version of Phaser from Git
 	function loadRemotePhaser (versionTag) {
+		var dfd = $.Deferred();
+		loadAndRunCode();
+		updateDisplayedVersion(versionTag);
+		return;
+		// Loading is now handled by in-document JS or possibly
+		// on resource generation itself.
+
 		var phaserUrl = "https://cdn.rawgit.com/photonstorm/phaser/" + versionTag + "/build/phaser.js"
 		return scriptLoader(phaserUrl)
 			.done(function (script, textStatus) {
