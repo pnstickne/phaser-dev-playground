@@ -2,27 +2,45 @@
 
 This repository maintains previous local functionality found in the [Phaser Examples][examples] repository and is designed to allow *fast/local developer interaction*.
 
-This repository links the Phaser Examples via a Git Submodule but does not otherwise contain Phaser example code.
+The Playground is designed to interact well with local Phaser and Phaser Examples but does not contain any Phaser framework or example code.
 
-If new to Phaser or not doing local development, the [Online Phaser Examples][online-examples] may be a better place to start. The Phaser framework itself [can be found here][phaser].
+If new to Phaser and not doing development on the core framework or examples, the [Online Phaser Examples][online-examples] may be a better place to start. The Phaser framework itself [can be found here][phaser].
 
+The Playground allows these demos to also be run locally and provides an environment useful for development or when running against local changes. Some of the changes / differences are:
 
-## Learn By Example
+- Supports *local Phaser builds*
+- Remote Phaser builds are cached for *offline development*
+- Runs against *local Example repository*
+- *Reduced UI decorations*; no social or sharing support
+- *No iframe* is used to hold game content
+- Phaser is *loaded as a synchronous script* (without XHR)
+- Only targets *non-minified* Phaser builds
 
-Phaser comes with an ever growing suite of [Examples][examples].These examples can be interacted with and even edited/created [in the online Phaser demo site][online-examples].  
+A local Node.js-Express server is used to host resources to avoid all sorts of ugly CORS issues; the server also combines necessarying resource and API calls.
 
-This repository allows these demos to also be run locally.
+## Getting Started
 
-The examples need to be run through a local web server (in order to avoid file access permission errors from your browser). You can use your own web server, or start the included web server using grunt.
+First pull a local copy of the [Phaser Example][examples] repository.
 
-Using a locally installed web server browse to the examples folder:
+To start the Example playground open a Node.js-compatible terminal.
 
-    examples/index.html
+Then navigate to the playground root directory and start the default grunt task:
 
-Alternatively in order to start the included web server, after you've cloned the repo, run `npm install` to install all dependencies, then `grunt connect` to start a local server. After running this command you should be able to access your local webserver at `http://127.0.0.1:8001`. Then browse to the examples folder: `http://127.0.0.1:8001/examples/index.html`
+    grunt
 
-There is a 'Side View' example viewer as well as the default. This loads all the examples into a left-hand frame for faster navigation.
+This will start the local which can be accessed by navigating to http://localhost:3000/index.html
 
+By default the the examples will be searched for in a sibling repository called 'phaser-examples', for example if the Playground is in '$/repos/playground' then the examples will be looked for in '$/repos/phaser-examples'.
+
+To change this, specify a different location to find the examples:
+
+   PHASER_EXAMPLES=path_to_example_repo grunt
+
+To run use a local Phaser build, simply move the Phaser.js file into '$playground_repo/local_builds'. This can be done 'automatically' after building Phaser (from the Phaser repository) by using:
+
+    grunt build && cp builds/Phaser.js $playground_repo/local_builds
+
+Multiple local builds are supported as long as they are given unique names in the form Phaser-{some_label}.js. There is no support for minified Phaser builds.
 
 ## Contributing
 

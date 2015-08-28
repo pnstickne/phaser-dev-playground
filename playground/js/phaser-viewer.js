@@ -81,7 +81,7 @@ jQuery(function ($) {
 		$dropdown.append($("<option></option>").text("Select a version"));
 		$.each(versions, function (codeKey, version) {
 			var option = $("<option></option>")
-				.attr("value", version.name + "_" + version.sha)
+				.attr("value", version.name)
 				.text(version.name);
 			$dropdown.append(option);
 		});

@@ -9,14 +9,26 @@ var PORT = process.env.PORT;
 var example_root = path.join(EXAMPLE_PATH, 'examples');
 var playground_root = path.resolve('playground');
 var cache_root = path.resolve('cache');
+var local_root = path.resolve('local_builds');
 
 app.get('/', function (req, res) {
   res.send('Hello World!');
 });
 
+var flatCache = require('flat-cache');
+var cache = flatCache.load('ext_api_cache', cache_root);
+
 // cb(err, data).
 // data - [{sha:sha1, name:branch_or_tag_name}]
 function asyncPhaserBuilds (cb) {
+
+  var builds = cache.getKey('builds');
+  if (builds) {
+    cb(null, {versions:
+      builds
+    });
+    return;
+  }
 
   var request = require('request-json');
   var client = request.createClient('https://api.github.com');
@@ -27,6 +39,12 @@ function asyncPhaserBuilds (cb) {
       var data = body;
       var tags = [];
       var i = data.length;
+
+      tags.push({
+        name: 'local',
+        sha: ''
+      });
+
       while (i--) {
         var item = data[i];
         if (item['ref']) {
@@ -39,9 +57,14 @@ function asyncPhaserBuilds (cb) {
           });
         }
       }
-      cb(null, {
+
+      var res = {
         versions: tags
-      });
+      };
+      cache.setKey('builds', tags);
+      cache.save();
+
+      cb(null, res);
     }
     else 
     {
@@ -57,7 +80,6 @@ app.get('/phaser/versions', function (req, res, next) {
 	
   asyncPhaserBuilds(function (err, data) {
     if (!err) {
-      console.log(data);
       res.send(200, {versions: data.versions});
     } else {
       next(err);
@@ -65,6 +87,21 @@ app.get('/phaser/versions', function (req, res, next) {
   });
 
 })
+
+function serveLocalPhaserVersion(req, res, next, version) {
+
+  var filePath = path.join(local_root, version != null ? "phaser-" + version + ".js" : "phaser.js");
+
+  var readStream = fs.createReadStream(filePath);
+
+  readStream.on('error', function (err) {
+    console.log('Failed to read local Phaser build: %s', filePath);
+    next(err);
+  });  
+
+  readStream.pipe(res);
+
+}
 
 // Fetch a specific Phaser script version
 // The Phaser Version is ultimately fetched from Git (or perhaps a local path)
@@ -82,11 +119,23 @@ app.get('/phaser/phaser-:version.js', function (req, res, next) {
 
     var versionName = req.params.version;
 
+    var m = versionName.match(/^local(?:[.](.*))?/);
+    if (m) {
+      serveLocalPhaserVersion(req, res, next, m[1]);
+      return;
+    }
+
     var versions = data.versions;
 
     var targetVersion = data.versions.filter(function (version) {
       return version.name === versionName;
     })[0];
+
+    if (!targetVersion) {
+      console.log("No target version found: " + versionName);
+      next("error");
+      return;
+    }
 
     // The specific SHA is used in the CDN url to avoid stale cahce pulls, mainly with branch names.
     // The URL could also use the non-CDN rawgit but the SHA information is already available.
@@ -103,15 +152,36 @@ app.get('/phaser/phaser-:version.js', function (req, res, next) {
       console.log('error in reading ' + f + " requesting proxy")
       readStream.unpipe();
 
+      var t = path.join(cache_root, "_" + ((Math.random() * 40000) << 0));
       // Nope, so try to create    
-      var writeStream = fs.createWriteStream(f);
+      var writeStream = fs.createWriteStream(t);
       
       writeStream.on('error', function (err) {
-        console.log("Unable to write to cache");
+        console.log("Unable to write to cache: " + e);
+
+        try {
+          fs.unlinkSync(t);
+        } catch (e) {
+          // Don't care
+        }
+
         next(err);
       });
       
       writeStream.on('finish', function (err) {
+
+        console.log("Remote dowload complete - renaming temp file");
+
+        try {
+          fs.renameSync(t, f);
+        } catch (e) {
+          try {
+            fs.unlinkSync(t);
+          } catch (e) {
+            // Don't care
+          }
+        }
+
         readStream = fs.createReadStream(f);
         readStream.on('error', function (err) {
           console.log('error in reading (after fetch)');
@@ -149,6 +219,7 @@ var server = app.listen(PORT, function () {
   console.log('  EXAMPLE_PATH: %s', example_root);
   console.log('     SITE_PATH: %s', playground_root);
   console.log('     CAHE_PATH: %s', cache_root);
+  console.log('  LOCAL_BUILDS: %s', local_root);
 });
 
 app.use('/', express.static(playground_root));

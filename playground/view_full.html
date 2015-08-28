@@ -24,9 +24,9 @@
     	// Phaser is loaded immediately and synchronously
     	;(function () {
 	    	var query = location.search.substr(1);
-		    var m = query.match(/\bv=(.*?)_(.*?)?(?:&|$)/);
+		    var m = query.match(/\bv=(.*?)(?:&|$)/); //_(.*?)?(?:&|$)/);
             var name = (m && m[1]) || 'master';
-		    var sha = (m && m[2]) || name;
+		    //var sha = (m && m[2]) || name;
 		    //var phaserUrl = "https://cdn.rawgit.com/photonstorm/phaser/" + sha + "/build/phaser.js?" + name;
             var phaserUrl = "phaser/phaser-" + name + ".js";
 		    document.write("<script src='" + phaserUrl + "'></" + "script>");
