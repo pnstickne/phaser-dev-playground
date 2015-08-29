@@ -58,11 +58,16 @@ function getLocalBuilds (cb) {
 // data - [{sha:sha1, name:branch_or_tag_name}]
 function getRemoteBuilds (cb) {
 
+  var buildTime = cache.getKey('remote_builds_fetched_at');
+  var forceFetch = buildTime && (+buildTime + (5 * 60 * 1000)) < +Date.now();
+
   var builds = cache.getKey('remote_builds');
-  if (builds) {
+  if (!forceFetch && builds) {
     cb(null, builds);
     return;
   }
+
+  console.log("Updating branch/tag build information from git");
 
   var request = require('request-json');
   var client = request.createClient('https://api.github.com');
@@ -91,7 +96,7 @@ function getRemoteBuilds (cb) {
       }
       else 
       {
-        cb('error:' + JSON.stringify(body));
+        cb(JSON.stringify(body));
       }
     });    
   }
@@ -108,8 +113,7 @@ function getRemoteBuilds (cb) {
         while (i--) {
           var item = data[i];
           if (item['ref']) {
-            // The version name is the tag name without the 'v' which was introduced later
-            var versionName = item['ref'].replace(/^refs\/tags\/v?/,'');
+            var versionName = item['ref'].replace(/^refs\/tags\//,'');
 
             builds.push({
               name: versionName,
@@ -123,7 +127,7 @@ function getRemoteBuilds (cb) {
       }
       else 
       {
-        cb('error:' + JSON.stringify(body));
+        cb(JSON.stringify(body));
       }
     });
   }
@@ -143,6 +147,7 @@ function getRemoteBuilds (cb) {
       var allBuilds = Array.prototype.concat.call([], branchBuilds, tagBuilds);
 
       cache.setKey('remote_builds', allBuilds);
+      cache.setKey('remote_builds_fetched_at', +Date.now());
       cache.save();
 
       cb(null, allBuilds);
@@ -157,7 +162,7 @@ app.get('/phaser/versions', function (req, res, next) {
 	
   getBuilds(function (err, builds) {
     if (!err) {
-      res.send(200, {versions: builds});
+      res.send({versions: builds});
     } else {
       next(err);
     }
@@ -167,7 +172,16 @@ app.get('/phaser/versions', function (req, res, next) {
 
 function serveLocalPhaserVersion(req, res, next, version) {
 
-  var filePath = path.join(local_root, version != null ? "phaser-" + version + ".js" : "phaser.js");
+  var filename = version != null ? "phaser-" + version + ".js" : "phaser.js";
+  var filePath = path.join(local_root, filename);
+
+  // var stats;
+  // try {
+  //   stats = fs.statSync(filePath);
+  // } catch (e) {
+  //   next(e);
+  //   return;
+  // }
 
   console.log('Streaming: ' + filePath);
   var readStream = fs.createReadStream(filePath);
@@ -276,14 +290,6 @@ app.get('/phaser/phaser-:version.js', function (req, res, next) {
 
   });
 
-//	request(phaserUrl, function (error, response, body) {
-//		if (response.statusCode == 200) {
-//			response.pipe(res);
-//		} else {
-//			next(error + "hi!" + response.statusCode + ":" + phaserUrl);
-//		}
-//	});
-   
 });
 
   
@@ -291,7 +297,7 @@ var server = app.listen(PORT, function () {
   var host = server.address().address;
   var port = server.address().port;
       
-  console.log('Example app listening at http://%s:%s', host, port);
+  console.log('Playground server listening at http://%s:%s', host, port);
   console.log('  EXAMPLE_PATH: %s', example_root);
   console.log('     SITE_PATH: %s', playground_root);
   console.log('     CAHE_PATH: %s', cache_root);
@@ -302,6 +308,3 @@ app.use('/', express.static(playground_root));
 
 app.use('/assets', express.static(path.join(example_root, 'assets')));
 app.use('/examples', express.static(example_root));
-
-
-

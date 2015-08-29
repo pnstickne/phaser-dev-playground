@@ -2,16 +2,17 @@
 <html>
     <head>
         <meta charset="UTF-8" />
-        <title>phaser</title>
+        <title>Phaser Playground</title>
         <base href="../"></base>
         <script src="js/jquery-2.1.4.js"></script>
         <script src="js/purl.js"></script>
         <script src="js/gamecontroller.js"></script>
+        
         <script src="js/phaser-examples-common.js"></script>
         <script src="js/phaser-viewer.js" ></script>
+
         <link href="css/phaser-examples.css" media="screen" rel="stylesheet" type="text/css">
         <link href="css/desert.css" rel="stylesheet" type="text/css">
-
 
         <script src="js/diff_match_patch.js"></script>
         <script src="js/codemirror.js"></script>
@@ -24,10 +25,8 @@
     	// Phaser is loaded immediately and synchronously
     	;(function () {
 	    	var query = location.search.substr(1);
-		    var m = query.match(/\bv=(.*?)(?:&|$)/); //_(.*?)?(?:&|$)/);
+		    var m = query.match(/\bv=(.*?)(?:&|$)/);
             var name = (m && m[1]) || 'master';
-		    //var sha = (m && m[2]) || name;
-		    //var phaserUrl = "https://cdn.rawgit.com/photonstorm/phaser/" + sha + "/build/phaser.js?" + name;
             var phaserUrl = "phaser/phaser-" + name + ".js";
 		    document.write("<script src='" + phaserUrl + "'></" + "script>");
 	    })();
@@ -100,7 +99,6 @@
         <button id="livecode-reset" class="centered">Discard Edits (Ctrl-R)</button>
         <div class="clear"></div>
         <div id="footer" class="footer">
-
             <div class="main-container centered">
             </div>
         </div>
