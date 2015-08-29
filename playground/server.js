@@ -16,60 +16,137 @@ app.get('/', function (req, res) {
 });
 
 var flatCache = require('flat-cache');
-var cache = flatCache.load('ext_api_cache', cache_root);
+var cache = flatCache.load('git_api_cache', cache_root);
+
+function getBuilds (cb) {
+  getLocalBuilds(function (err, localBuilds) {
+    if (err) {
+      cb(err);
+      return;
+    }
+    getRemoteBuilds(function (err, remoteBuilds) {
+      if (err) {
+        cb(err);
+        return;
+      }
+
+      var allBuilds = Array.prototype.concat.call([], localBuilds, remoteBuilds);
+      cb(null, allBuilds);
+    });
+  });
+}
+
+function getLocalBuilds (cb) {
+  var builds = [];
+
+  fs.readdirSync(local_root).forEach(function(name) {
+      var filePath = path.join(local_root, name);
+      var m = name.match(/^(?:phaser|phaser-(.*))[.]js$/i);
+      if (m) {
+        var localName = m[1] ? 'local.' + m[1] : 'local';
+        builds.push({
+          name: localName,
+          sha: null
+        });
+      }
+  });
+
+  cb(null, builds);
+}
 
 // cb(err, data).
 // data - [{sha:sha1, name:branch_or_tag_name}]
-function asyncPhaserBuilds (cb) {
+function getRemoteBuilds (cb) {
 
-  var builds = cache.getKey('builds');
+  var builds = cache.getKey('remote_builds');
   if (builds) {
-    cb(null, {versions:
-      builds
-    });
+    cb(null, builds);
     return;
   }
 
   var request = require('request-json');
   var client = request.createClient('https://api.github.com');
-  // Hopefully there are never more than 100 tags..
-  client.get('repos/photonstorm/phaser/git/refs/tags?per_page=100', function (err, response, body) {
-    if (response.statusCode == 200) 
-    {
-      var data = body;
-      var tags = [];
-      var i = data.length;
 
-      tags.push({
-        name: 'local',
-        sha: ''
-      });
+  function remoteBranches (cb) {
+    // Hopefully there are never more than 100 tags..
+    client.get('repos/photonstorm/phaser/branches?per_page=100', function (err, response, body) {
+      if (!err && response.statusCode == 200) 
+      {
+        var data = body;
+        var builds = [];
+        var i = data.length;
 
-      while (i--) {
-        var item = data[i];
-        if (item['ref']) {
+        while (i--) {
+          var item = data[i];
           // The version name is the tag name without the 'v' which was introduced later
-          var versionName = item['ref'].replace(/^refs\/tags\/v?/,'');
+          var versionName = item['name'];
 
-          tags.push({
+          builds.push({
             name: versionName,
-            sha: item['object']['sha']
+            sha: item['commit']['sha']
           });
         }
+
+        cb(null, builds);
+      }
+      else 
+      {
+        cb('error:' + JSON.stringify(body));
+      }
+    });    
+  }
+
+  function remoteTags (cb) {
+    // Hopefully there are never more than 100 tags..
+    client.get('repos/photonstorm/phaser/git/refs/tags?per_page=100', function (err, response, body) {
+      if (!err && response.statusCode == 200) 
+      {
+        var data = body;
+        var builds = [];
+        var i = data.length;
+
+        while (i--) {
+          var item = data[i];
+          if (item['ref']) {
+            // The version name is the tag name without the 'v' which was introduced later
+            var versionName = item['ref'].replace(/^refs\/tags\/v?/,'');
+
+            builds.push({
+              name: versionName,
+              sha: item['object']['sha']
+            });
+          }
+        }
+
+
+        cb(null, builds);
+      }
+      else 
+      {
+        cb('error:' + JSON.stringify(body));
+      }
+    });
+  }
+
+  remoteBranches(function (err, branchBuilds) {
+    if (err) {
+      cb(err)
+      return;
+    }
+
+    remoteTags(function (err, tagBuilds) {
+      if (err) {
+        cb(err);
+        return;
       }
 
-      var res = {
-        versions: tags
-      };
-      cache.setKey('builds', tags);
+      var allBuilds = Array.prototype.concat.call([], branchBuilds, tagBuilds);
+
+      cache.setKey('remote_builds', allBuilds);
       cache.save();
 
-      cb(null, res);
-    }
-    else 
-    {
-      cb('error:' + JSON.stringify(body));
-    }
+      cb(null, allBuilds);
+    });
   });
 
 }
@@ -78,9 +155,9 @@ function asyncPhaserBuilds (cb) {
 // be serviced. The actual JS may still need to be downloaded.
 app.get('/phaser/versions', function (req, res, next) {
 	
-  asyncPhaserBuilds(function (err, data) {
+  getBuilds(function (err, builds) {
     if (!err) {
-      res.send(200, {versions: data.versions});
+      res.send(200, {versions: builds});
     } else {
       next(err);
     }
@@ -92,6 +169,7 @@ function serveLocalPhaserVersion(req, res, next, version) {
 
   var filePath = path.join(local_root, version != null ? "phaser-" + version + ".js" : "phaser.js");
 
+  console.log('Streaming: ' + filePath);
   var readStream = fs.createReadStream(filePath);
 
   readStream.on('error', function (err) {
@@ -110,7 +188,7 @@ function serveLocalPhaserVersion(req, res, next, version) {
 app.get('/phaser/phaser-:version.js', function (req, res, next) {
 	var request = require('request');
 
-  asyncPhaserBuilds(function (err, data)
+  getBuilds(function (err, builds)
   {
     if (err) {
       next(err);
@@ -119,15 +197,13 @@ app.get('/phaser/phaser-:version.js', function (req, res, next) {
 
     var versionName = req.params.version;
 
-    var m = versionName.match(/^local(?:[.](.*))?/);
+    var m = versionName.match(/^local(?:[.](.*))?$/);
     if (m) {
       serveLocalPhaserVersion(req, res, next, m[1]);
       return;
     }
 
-    var versions = data.versions;
-
-    var targetVersion = data.versions.filter(function (version) {
+    var targetVersion = builds.filter(function (version) {
       return version.name === versionName;
     })[0];
 

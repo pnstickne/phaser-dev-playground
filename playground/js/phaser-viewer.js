@@ -149,51 +149,8 @@ jQuery(function ($) {
 
 	var scriptLoader = loadScript; // or $.getScript
 
-	// Load the local version of Phaser
-	function loadLocalPhaser () {
-		var phaserUrl = localPhaserUrl;
-		return scriptLoader(phaserUrl)
-			.done(function (script, textStatus) {
-				console.log("Loaded local Phaser.js: " + phaserUrl);
-				window.Phaser.LOADED_FROM = phaserUrl;
-				loadAndRunCode();
-				updateDisplayedVersion('local');
-			})
-			.fail(function(jqxhr, settings, exception) {
-				console.log("Failed to load local Phaser.js (" + phaser + "), nothing else to do");
-			});
-	}
-
-	// Load a specific (remote) version of Phaser from Git
-	function loadRemotePhaser (versionTag) {
-		var dfd = $.Deferred();
-		loadAndRunCode();
-		updateDisplayedVersion(versionTag);
-		return;
-		// Loading is now handled by in-document JS or possibly
-		// on resource generation itself.
-
-		var phaserUrl = "https://cdn.rawgit.com/photonstorm/phaser/" + versionTag + "/build/phaser.js"
-		return scriptLoader(phaserUrl)
-			.done(function (script, textStatus) {
-				console.log("Loaded github Phaser.js: " + phaserUrl);
-				window.Phaser.LOADED_FROM = phaserUrl;
-				loadAndRunCode();
-				updateDisplayedVersion(versionTag);
-			})
-			.fail(function (jqxhr, settings, exception) {
-				console.log("Failed to load Phaser.js from github (" + phaserUrl + "), falling back to local copy");
-				return loadLocalPhaser();
-			});
-	}
-
-	if (requestedVersion !== localTagName) {
-		loadRemotePhaser(requestedVersion);
-	}
-	else
-	{
-		loadLocalPhaser();
-	}
+	loadAndRunCode();
+	//updateDisplayedVersion('local');
 
 	// Use as key into localStore for this example
 	var codeKey = "[" + dir + "/" + file + "]";
