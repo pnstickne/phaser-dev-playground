@@ -1,3 +1,5 @@
+"use strict";
+
 var express = require('express');
 var app = express();
 var path = require('path');
@@ -11,38 +13,24 @@ var playground_root = path.resolve('playground');
 var cache_root = path.resolve('cache');
 var local_root = path.resolve('local_builds');
 
-app.get('/', function (req, res) {
+app.get('/', function (req, res)
+{
   res.send('Hello World!');
 });
 
 var flatCache = require('flat-cache');
 var cache = flatCache.load('git_api_cache', cache_root);
 
-function getBuilds (cb) {
-  getLocalBuilds(function (err, localBuilds) {
-    if (err) {
-      cb(err);
-      return;
-    }
-    getRemoteBuilds(function (err, remoteBuilds) {
-      if (err) {
-        cb(err);
-        return;
-      }
-
-      var allBuilds = Array.prototype.concat.call([], localBuilds, remoteBuilds);
-      cb(null, allBuilds);
-    });
-  });
-}
-
-function getLocalBuilds (cb) {
+function getLocalBuilds (cb)
+{
   var builds = [];
 
-  fs.readdirSync(local_root).forEach(function(name) {
-      var filePath = path.join(local_root, name);
+  fs.readdirSync(local_root).forEach(function (name)
+  {
+      // var filePath = path.join(local_root, name);
       var m = name.match(/^(?:phaser|phaser-(.*))[.]js$/i);
-      if (m) {
+      if (m)
+      {
         var localName = m[1] ? 'local.' + m[1] : 'local';
         builds.push({
           name: localName,
@@ -56,13 +44,15 @@ function getLocalBuilds (cb) {
 
 // cb(err, data).
 // data - [{sha:sha1, name:branch_or_tag_name}]
-function getRemoteBuilds (cb) {
+function getRemoteBuilds (cb)
+{
 
   var buildTime = cache.getKey('remote_builds_fetched_at');
-  var forceFetch = buildTime && (+buildTime + (5 * 60 * 1000)) < +Date.now();
+  var forceFetch = buildTime && (+buildTime + 5 * 60 * 1000) < +Date.now();
 
   var builds = cache.getKey('remote_builds');
-  if (!forceFetch && builds) {
+  if (!forceFetch && builds)
+  {
     cb(null, builds);
     return;
   }
@@ -72,16 +62,19 @@ function getRemoteBuilds (cb) {
   var request = require('request-json');
   var client = request.createClient('https://api.github.com');
 
-  function remoteBranches (cb) {
+  function remoteBranches (cb)
+  {
     // Hopefully there are never more than 100 tags..
-    client.get('repos/photonstorm/phaser/branches?per_page=100', function (err, response, body) {
-      if (!err && response.statusCode == 200) 
+    client.get('repos/photonstorm/phaser/branches?per_page=100', function (err, response, body)
+    {
+      if (!err && response.statusCode === 200)
       {
         var data = body;
         var builds = [];
         var i = data.length;
 
-        while (i--) {
+        while (i--)
+        {
           var item = data[i];
           // The version name is the tag name without the 'v' which was introduced later
           var versionName = item['name'];
@@ -93,27 +86,33 @@ function getRemoteBuilds (cb) {
         }
 
         cb(null, builds);
+        return;
       }
-      else 
+      else
       {
         cb(JSON.stringify(body));
+        return;
       }
-    });    
+    });
   }
 
-  function remoteTags (cb) {
+  function remoteTags (cb)
+  {
     // Hopefully there are never more than 100 tags..
-    client.get('repos/photonstorm/phaser/git/refs/tags?per_page=100', function (err, response, body) {
-      if (!err && response.statusCode == 200) 
+    client.get('repos/photonstorm/phaser/git/refs/tags?per_page=100', function (err, response, body)
+    {
+      if (!err && response.statusCode === 200)
       {
         var data = body;
         var builds = [];
         var i = data.length;
 
-        while (i--) {
+        while (i--)
+        {
           var item = data[i];
-          if (item['ref']) {
-            var versionName = item['ref'].replace(/^refs\/tags\//,'');
+          if (item['ref'])
+          {
+            var versionName = item['ref'].replace(/^refs\/tags\//, '');
 
             builds.push({
               name: versionName,
@@ -122,24 +121,29 @@ function getRemoteBuilds (cb) {
           }
         }
 
-
         cb(null, builds);
+        return;
       }
-      else 
+      else
       {
         cb(JSON.stringify(body));
+        return;
       }
     });
   }
 
-  remoteBranches(function (err, branchBuilds) {
-    if (err) {
+  remoteBranches(function (err, branchBuilds)
+  {
+    if (err)
+    {
       cb(err)
       return;
     }
 
-    remoteTags(function (err, tagBuilds) {
-      if (err) {
+    remoteTags(function (err, tagBuilds)
+    {
+      if (err)
+      {
         cb(err);
         return;
       }
@@ -156,21 +160,51 @@ function getRemoteBuilds (cb) {
 
 }
 
+function getBuilds (cb)
+{
+  getLocalBuilds(function (err, localBuilds)
+  {
+    if (err)
+    {
+      cb(err);
+      return;
+    }
+    getRemoteBuilds(function (err, remoteBuilds)
+    {
+      if (err)
+      {
+        cb(err);
+        return;
+      }
+
+      var allBuilds = Array.prototype.concat.call([], localBuilds, remoteBuilds);
+      cb(null, allBuilds);
+    });
+  });
+}
+
 // Returns a list of the available phaser versions that can
 // be serviced. The actual JS may still need to be downloaded.
-app.get('/phaser/versions', function (req, res, next) {
-	
-  getBuilds(function (err, builds) {
-    if (!err) {
+app.get('/phaser/versions', function (req, res, next)
+{
+
+  getBuilds(function (err, builds)
+  {
+    if (!err)
+    {
       res.send({versions: builds});
-    } else {
+    }
+    else
+    {
       next(err);
+      return;
     }
   });
 
 })
 
-function serveLocalPhaserVersion(req, res, next, version) {
+function serveLocalPhaserVersion (req, res, next, version)
+{
 
   var filename = version != null ? "phaser-" + version + ".js" : "phaser.js";
   var filePath = path.join(local_root, filename);
@@ -186,30 +220,34 @@ function serveLocalPhaserVersion(req, res, next, version) {
   console.log('Streaming: ' + filePath);
   var readStream = fs.createReadStream(filePath);
 
-  readStream.on('error', function (err) {
+  readStream.on('error', function (err)
+  {
     console.log('Failed to read local Phaser build: %s', filePath);
     next(err);
-  });  
+  });
 
   readStream.pipe(res);
 
 }
 
 // Scan the example directory and build metadata out of it
-function buildExampleMetadata (root, cb) {
+function buildExampleMetadata (root, cb)
+{
 
   var exampleGroups = {};
 
-  fs.readdirSync(example_root).forEach(function(name) {
+  fs.readdirSync(example_root).forEach(function (name)
+  {
       var filePath = path.join(example_root, name);
       var stat = fs.statSync(filePath);
 
-      if (stat.isDirectory() && !name.match(/^[_.]/)) {
+      if (stat.isDirectory() && !name.match(/^[_.]/))
+      {
         var exampleGroup = [];
         exampleGroups[name] = exampleGroup;
 
-        fs.readdirSync(filePath).forEach(function (name) {
-          var filePath2 = path.join(filePath, name);
+        fs.readdirSync(filePath).forEach(function (name)
+        {
           var m = name.match(/^(.*)[.]js$/);
           if (m)
           {
@@ -228,10 +266,13 @@ function buildExampleMetadata (root, cb) {
 }
 
 // Fetch/build the example metadata
-app.get('/examples/examples.json', function (req, res, next) {
+app.get('/examples/examples.json', function (req, res, next)
+{
 
-  buildExampleMetadata(example_root, function (err, examples) {
-    if (err) {
+  buildExampleMetadata(example_root, function (err, examples)
+  {
+    if (err)
+    {
       next(err);
       return;
     }
@@ -245,12 +286,14 @@ app.get('/examples/examples.json', function (req, res, next) {
 // The Phaser Version is ultimately fetched from Git (or perhaps a local path)
 // but cached locally for future offline access.
 //   version: a short version name such as '4.3.1', 'master', or 'local'
-app.get('/phaser/phaser-:version.js', function (req, res, next) {
+app.get('/phaser/phaser-:version.js', function (req, res, next)
+{
 	var request = require('request');
 
   getBuilds(function (err, builds)
   {
-    if (err) {
+    if (err)
+    {
       next(err);
       return;
     }
@@ -258,16 +301,19 @@ app.get('/phaser/phaser-:version.js', function (req, res, next) {
     var versionName = req.params.version;
 
     var m = versionName.match(/^local(?:[.](.*))?$/);
-    if (m) {
+    if (m)
+    {
       serveLocalPhaserVersion(req, res, next, m[1]);
       return;
     }
 
-    var targetVersion = builds.filter(function (version) {
+    var targetVersion = builds.filter(function (version)
+    {
       return version.name === versionName;
     })[0];
 
-    if (!targetVersion) {
+    if (!targetVersion)
+    {
       console.log("No target version found: " + versionName);
       next("error");
       return;
@@ -280,46 +326,44 @@ app.get('/phaser/phaser-:version.js', function (req, res, next) {
 
     res.setHeader("X-Origin-Resource", phaserUrl);
 
-    //fs.readFile(path.combine(cache_root, 'phaser-' + targetSha + ".js"), "r", function (err, )
+    // fs.readFile(path.combine(cache_root, 'phaser-' + targetSha + ".js"), "r", function (err, )
     var f = path.join(cache_root, "phaser-" + targetSha + ".js");
 
-    readStream = fs.createReadStream(f);
-    readStream.on('error', function (err) {
+    var readStream = fs.createReadStream(f);
+    readStream.on('error', function (/* err */)
+    {
       console.log('error in reading ' + f + " requesting proxy")
       readStream.unpipe();
 
       var t = path.join(cache_root, "_" + ((Math.random() * 40000) << 0));
-      // Nope, so try to create    
+      // Nope, so try to create
       var writeStream = fs.createWriteStream(t);
-      
-      writeStream.on('error', function (err) {
-        console.log("Unable to write to cache: " + e);
 
-        try {
-          fs.unlinkSync(t);
-        } catch (e) {
-          // Don't care
-        }
+      writeStream.on('error', function (err)
+      {
+        console.log("Unable to write to cache: %s", err);
+
+        try { fs.unlinkSync(t); }
+        catch (e) { /*  Don't care */ }
 
         next(err);
       });
-      
-      writeStream.on('finish', function (err) {
+
+      writeStream.on('finish', function (/* err */)
+      {
 
         console.log("Remote dowload complete - renaming temp file");
 
-        try {
-          fs.renameSync(t, f);
-        } catch (e) {
-          try {
-            fs.unlinkSync(t);
-          } catch (e) {
-            // Don't care
-          }
+        try { fs.renameSync(t, f); }
+        catch (e)
+        {
+          try { fs.unlinkSync(t); }
+          catch (e) { /* Don't care */ }
         }
 
-        readStream = fs.createReadStream(f);
-        readStream.on('error', function (err) {
+        var readStream = fs.createReadStream(f);
+        readStream.on('error', function (err)
+        {
           console.log('error in reading (after fetch)');
           next(err);
         });
@@ -338,11 +382,10 @@ app.get('/phaser/phaser-:version.js', function (req, res, next) {
 
 });
 
-  
 var server = app.listen(PORT, function () {
   var host = server.address().address;
   var port = server.address().port;
-      
+
   console.log('Playground server listening at http://%s:%s', host, port);
   console.log('  EXAMPLE_PATH: %s', example_root);
   console.log('     SITE_PATH: %s', playground_root);
