@@ -195,6 +195,52 @@ function serveLocalPhaserVersion(req, res, next, version) {
 
 }
 
+// Scan the example directory and build metadata out of it
+function buildExampleMetadata (root, cb) {
+
+  var exampleGroups = {};
+
+  fs.readdirSync(example_root).forEach(function(name) {
+      var filePath = path.join(example_root, name);
+      var stat = fs.statSync(filePath);
+
+      if (stat.isDirectory() && !name.match(/^[_.]/)) {
+        var exampleGroup = [];
+        exampleGroups[name] = exampleGroup;
+
+        fs.readdirSync(filePath).forEach(function (name) {
+          var filePath2 = path.join(filePath, name);
+          var m = name.match(/^(.*)[.]js$/);
+          if (m)
+          {
+            var encodedFilename = encodeURIComponent(name);
+            encodedFilename = encodedFilename.replace(/%20/g, '+');
+            exampleGroup.push({
+              file: encodedFilename,
+              title: m[1]
+            });
+          }
+        });
+      }
+  });
+
+  cb(null, exampleGroups);
+}
+
+// Fetch/build the example metadata
+app.get('/examples/examples.json', function (req, res, next) {
+
+  buildExampleMetadata(example_root, function (err, examples) {
+    if (err) {
+      next(err);
+      return;
+    }
+
+    res.send(examples);
+  });
+
+});
+
 // Fetch a specific Phaser script version
 // The Phaser Version is ultimately fetched from Git (or perhaps a local path)
 // but cached locally for future offline access.
