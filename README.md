@@ -49,8 +49,18 @@ By default the the Examples will be searched for in a sibling repository called 
 To change the location used to find the Examples use:
 
     PHASER_EXAMPLES=path_to_example_repo grunt play
-    # or
+    # or:
     grunt play --phaser-examples=path_to_example_repo
+
+### Editing Examples 
+
+The Playground uses the [CodeMirror][codemirror] editor and all examples are immediatly editable.
+
+The 'Save and Run Code' button saves the changes *to the browser's localStorage*. The changes will remain in effect until the 'Discard Changes' button is pressed. Changes 'saved' in this manner are *not* persisted to the Example repository.
+
+The examples in the Examples repository can also be edited directly on disk. After saving the changes in a local editor simply reload the example webpage. (Note: browser edits *must* be discarded for the changes to show up.)
+
+### Local Phaser Builds
 
 To use a local / custom Phaser build, simply move the built `phaser.js` file into `$/repos/playground/local_builds`. This can be done in an automated fashion when performing a Phaser build by using:
 
@@ -60,13 +70,15 @@ To use a local / custom Phaser build, simply move the built `phaser.js` file int
 
 Multiple local builds are supported as long as they are given unique names in the form `phaser-{some_label}.js`. Because the Playground is designed for development, and debugging of such, there is no support for minified builds or map files.
 
+The new or updated local build will be avialable/used the next time the example page is refreshed.
+
 ### Caching and Offline Access
 
 The `$/repos/playground/cache` directory is used for various caching purposed. If caching goes terribly wrong then delete the contents of this folder and restart the Playground server.
 
-The first time an official published Phaser build is used it is downloaded it is stored in the cache and the Playground can be used without internet access.
+The first time a published Phaser build is used it is downloaded from rawgit and stored in the cache folder. The cached version will continue to remain available without internet access.
 
-Access to the github API to determine the latest Phaser builds is also cached for 5 minutes; a stale-copy will be returned in offline scenarios.
+Access to the github API, such as when determine the latest Phaser builds, is also cached for a short time; a stale-copy will be returned in offline scenarios.
 
 ## Contributing
 
@@ -102,3 +114,4 @@ The Phaser, Phaser Examples, and the Phaser Playground are released under the [M
 [phaser]: https://github.com/photonstorm/phaser
 [pixijs]: https://github.com/GoodBoyDigital/pixi.js 
 [nodejs]: https://nodejs.org
+[codemirror]: https://codemirror.net/
