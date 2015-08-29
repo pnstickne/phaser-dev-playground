@@ -1,4 +1,1 @@
 node_modules
-cache/**
-local_builds/**
-!local_builds/README.md
