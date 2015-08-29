@@ -1,14 +1,16 @@
-# Phaser Examples - Playground
+# Phaser dev:Playground
 
-This [Phaser Example Playground][playground] (or simply 'Playground') maintains and enhances functionality previously found in the [Phaser Examples][examples] repository. It is designed to allow *fast local developer interaction* with the [Phaser framework][phaser], Phaser Examples, and to complement other resources.
+The [Phaser dev:Playground][playground] project (or simply 'Playground') maintains and enhances functionality previously found in the [Phaser Examples][examples] repository. It is designed to allow *fast local developer interaction* with the [Phaser framework][phaser], Phaser Examples, and to complement other resources.
 
 If new to Phaser, and not doing development on the core framework or examples, the [online Phaser Examples][online-examples] or [online Phaser Sandbox][online-sandbox] may be better places to start.
 
-## Why the Playground?
+The Playground requires [Node.js][nodejs] and some knowledge of the Node console.
+
+## Why dev:Playground?
 
 The Playground is designed to interact well with local [Phaser][phaser] and [Phaser Examples][examples] git repositories; it does not contain any Phaser framework or example code itself.
 
-The Playground allows Phaser Examples to be run locally and provides an environment taylored towwards development and testing local changes. The Playground is specially designed for working on *local builds* of Phaser or *local modifications* to the Phaser Example repository.
+The Playground allows Phaser Examples to be run locally and provides an environment taylored towards development and testing local changes. The Playground is specially designed for working on *local builds* of Phaser or *local modifications* to the Phaser Example repository.
 
 Some of the differences between the online Examples are:
 
@@ -27,26 +29,44 @@ A local Node.js-Express server is used to host resources to avoid all sorts of u
 
 ## Getting Started
 
-First clone/pull a local copy of the [Phaser Example][examples] repository. This is required because the Playground does *not* include any of the Phaser examples.
+First clone a local copy of the [Phaser Example][examples] repository. This is required because the Playground does *not* include any of the Phaser examples.
 
-To start the Example playground open a Node.js-compatible terminal and then navigate to the playground root directory. The Node.js-Express server can then be started with a grunt task:
+To start the Playground open a Node.js terminal and navigate to the root directory of the Playground repository (henceforth refered to as `$/repos/playground`).
+
+The first task to fetchi and update the required Node Package dependencies:
+
+    cd $/repos/playground
+    npm update
+
+After the dependencies are installed, simple start the Node.js-Express server:
 
     grunt play
 
-This will start the local which can be accessed by navigating to **http://localhost:3000/index.html**
+This will start the hosting server which can be accessed by navigating to `http://localhost:3000/index.html`. (Warning: this server is *not* designed for public access.)
 
-By default the the examples will be searched for in a sibling repository called 'phaser-examples', for example if the Playground is in '$/repos/playground' then the examples will be looked for in '$/repos/phaser-examples'.
+By default the the Examples will be searched for in a sibling repository called 'phaser-examples', for example if the Playground repository is `$/repos/playground` then the examples will be looked for in `$/repos/phaser-examples`.
 
-To change this, specify a different location to find the examples:
+To change the location used to find the Examples use:
 
     PHASER_EXAMPLES=path_to_example_repo grunt play
+    # or
+    grunt play --phaser-examples=path_to_example_repo
 
-To use a local / custom Phaser build, simply move the 'phaser.js' file into '$/repos/playground/local_builds'. This can be done in an automated fashion when performing a Phaser build by using:
+To use a local / custom Phaser build, simply move the built `phaser.js` file into `$/repos/playground/local_builds`. This can be done in an automated fashion when performing a Phaser build by using:
 
+    cd $/repos/phaser
     # Remember: do this in the Phaser repository
     grunt build && cp builds/phaser.js $/repos/playground/local_builds
 
-Multiple local builds are supported as long as they are given unique names in the form 'phaser-{some_label}.js'. Because the Playground is designed for development, and debugging of such, there is no support for minified builds or map files.
+Multiple local builds are supported as long as they are given unique names in the form `phaser-{some_label}.js`. Because the Playground is designed for development, and debugging of such, there is no support for minified builds or map files.
+
+### Caching and Offline Access
+
+The `$/repos/playground/cache` directory is used for various caching purposed. If caching goes terribly wrong then delete the contents of this folder and restart the Playground server.
+
+The first time an official published Phaser build is used it is downloaded it is stored in the cache and the Playground can be used without internet access.
+
+Access to the github API to determine the latest Phaser builds is also cached for 5 minutes; a stale-copy will be returned in offline scenarios.
 
 ## Contributing
 
@@ -57,6 +77,10 @@ Multiple local builds are supported as long as they are given unique names in th
    - Make sure it passes `grunt lint` - "When in Rome.."
 
 2. Submit a Pull Request
+
+   - Squash many commits into one (or several) relevant commits
+
+   - Be mindful of feedback
 
 ## Bugs?
 
@@ -70,11 +94,11 @@ Phaser is a fast, free and fun open source game framework by Richard Davey of [P
 
 The Phaser, Phaser Examples, and the Phaser Playground are released under the [MIT License](http://opensource.org/licenses/MIT); this does *not* necessarily include any assets (art, music, sounds) that may be found within.
 
-[playground]: https://github.com/pnstickne/phaser-examples-playground
+[playground]: https://github.com/pnstickne/phaser-dev-playground
 [issues]: https://github.com/pnstickne/phaser-examples-playground/issues
 [examples]: https://github.com/photonstorm/phaser-examples
 [online-examples]: http://examples.phaser.io
 [online-sandbox]: http://phaser.io/sandbox
 [phaser]: https://github.com/photonstorm/phaser
 [pixijs]: https://github.com/GoodBoyDigital/pixi.js 
-
+[nodejs]: https://nodejs.org
