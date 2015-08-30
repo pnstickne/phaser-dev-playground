@@ -45,7 +45,8 @@ module.exports = function (grunt) {
             target: [
               /* 'playground/js/phaser*.js', */
               'Gruntfile.js',
-              'playground/*.js'
+              'playground/*.js',
+              'playground/js/phaser-viewer.js'
             ]
         },
 
