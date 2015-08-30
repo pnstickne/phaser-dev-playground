@@ -36,7 +36,7 @@ To start the Playground open a Node.js terminal and navigate to the root directo
 The first task to fetchi and update the required Node Package dependencies:
 
     cd $/repos/playground
-    npm update
+    npm install
 
 After the dependencies are installed, simple start the Node.js-Express server:
 
