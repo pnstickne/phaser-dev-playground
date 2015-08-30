@@ -62,12 +62,11 @@ jQuery(function ($) {
 	// List the found Phaser versions/tags
 	function displayPhaserVersionSelection (versions, activeTag) {
 
-		var $element = $('.phaser-version');
-		var $dropdown = $("<select></select>").on('change', function () {
+		var $dropdown = $('.phaser-version select');
+		$dropdown.on('change', function () {
 			switchToVersion(this.value);
 		});
-		$element.append($dropdown);
-		$dropdown.append($("<option></option>").text("Select a version"));
+
 		$.each(versions, function (codeKey, version) {
 			var option = $("<option></option>")
 				.attr("value", version.name)
