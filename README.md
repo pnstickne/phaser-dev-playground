@@ -60,7 +60,15 @@ The 'Save and Run Code' button saves the changes *to the browser's localStorage*
 
 The examples in the Examples repository can also be edited directly on disk. After saving the changes in a local editor simply reload the example webpage. (Note: browser edits *must* be discarded for the changes to show up.)
 
-### Local Phaser Builds
+#### Adding and Removing Examples
+
+To add a new example orremove an existing example just add or remove the file from the linked Example repository (eg. `$/repos/phaser-examples`). The change will be reflected when the example list page is reloaded. Examples can also be renamed or moved.
+
+The Playground lists all example folders and files it finds. Some example categories such as `wip` will show up even though most of these work-in-progress examples are incomplete; such categories are *not* included the online Example site.
+
+There is no need to manually update any JSON metadata.
+
+### Using Local Phaser Builds
 
 To use a local / custom Phaser build, simply move the built `phaser.js` file into `$/repos/playground/local_builds`. This can be done in an automated fashion when performing a Phaser build by using:
 
@@ -74,7 +82,7 @@ The new or updated local build will be avialable/used the next time the example 
 
 ### Caching and Offline Access
 
-The `$/repos/playground/cache` directory is used for various caching purposed. If caching goes terribly wrong then delete the contents of this folder and restart the Playground server.
+The `cache` directory is used for various caching purposed. If caching goes terribly wrong then delete the contents of this folder and restart the Playground server.
 
 The first time a published Phaser build is used it is downloaded from rawgit and stored in the cache folder. The cached version will continue to remain available without internet access.
 
