@@ -42,8 +42,10 @@
   "dependencies": {
     "express": "^4.13.3",
     "flat-cache": "^1.0.3",
+    "lodash": "~3.10.1",
     "request": "^2.61.0",
     "request-json": "^0.5.3",
-    "lodash": "~3.10.1"
+    "rx": "^3.1.1",
+    "uuid": "^2.0.1"
   }
 }

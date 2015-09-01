@@ -4,6 +4,8 @@ var express = require('express');
 var app = express();
 var path = require('path');
 var fs = require('fs');
+var util = require('util');
+var uuid = require('uuid');
 
 var EXAMPLE_PATH = process.env.EXAMPLE_PATH;
 var PORT = process.env.PORT;
@@ -21,166 +23,172 @@ app.get('/', function (req, res)
 var flatCache = require('flat-cache');
 var cache = flatCache.load('git_api_cache', cache_root);
 
-function getLocalBuilds (cb)
-{
-  var builds = [];
+var Rx = require('rx');
 
-  fs.readdirSync(local_root).forEach(function (name)
-  {
-      // var filePath = path.join(local_root, name);
+Rx.Observable.prototype.toNodeCallback = function (cb) {
+  var value;
+  this.subscribe(
+    function (x) { value = x; },
+    function (err) { cb(err); },
+    function () { cb(null, value); });
+};
+
+// Returns Obs<build_info>
+function getLocalBuilds ()
+{
+  var readdir = Rx.Observable.fromNodeCallback(fs.readdir);
+
+  return readdir(local_root).flatMap(function (names) {
+    return names.map(function (name) {
       var m = name.match(/^(?:phaser|phaser-(.*))[.]js$/i);
       if (m)
       {
         var localName = m[1] ? 'local.' + m[1] : 'local';
-        builds.push({
+        return {
           name: localName,
-          sha: null
-        });
+          sha: null,
+          type: 'file'
+        };
       }
+    })
+    .filter(function (build) {
+      return !!build;
+    });
   });
-
-  cb(null, builds);
 }
 
-// cb(err, data).
-// data - [{sha:sha1, name:branch_or_tag_name}]
-function getRemoteBuilds (cb)
+// build_info:
+// - name
+// - sha (only from git)
+// - type: branch, tag, local, remote
+// - url
+
+// returns Obs<build_info>
+function getRemoteBuilds ()
 {
 
   var buildTime = cache.getKey('remote_builds_fetched_at');
   var forceFetch = buildTime && (+buildTime + 5 * 60 * 1000) < +Date.now();
 
   var builds = cache.getKey('remote_builds');
-  if (!forceFetch && builds)
-  {
-    cb(null, builds);
-    return;
+  if (!forceFetch && builds) {
+    return Rx.Observable.from(builds);
   }
 
-  console.log("Updating branch/tag build information from git");
+  console.log("Updating remote build information");
 
   var request = require('request-json');
   var client = request.createClient('https://api.github.com');
 
-  function remoteBranches (cb)
-  {
-    // Hopefully there are never more than 100 tags..
-    client.get('repos/photonstorm/phaser/branches?per_page=100', function (err, response, body)
-    {
-      if (!err && response.statusCode === 200)
-      {
-        var data = body;
-        var builds = [];
-        var i = data.length;
+  var getRx = Rx.Observable.fromNodeCallback(client.get, client, function (response, body) {
+      return {response: response, body: body};
+    });
 
-        while (i--)
-        {
-          var item = data[i];
-          // The version name is the tag name without the 'v' which was introduced later
+  // returns Obs<build_info[]>
+  function remoteBranchCollection ()
+  {
+    return getRx('repos/photonstorm/phaser/branches?per_page=100')
+      .map(function (r) {
+
+        var items = r.response.statusCode === 200 ? r.body : [];
+        return items.map(function (item) {
           var versionName = item['name'];
-
-          builds.push({
+          var sha = item['commit']['sha'];
+          return {
             name: versionName,
-            sha: item['commit']['sha']
-          });
-        }
-
-        cb(null, builds);
-        return;
-      }
-      else
-      {
-        cb(JSON.stringify(body));
-        return;
-      }
-    });
-  }
-
-  function remoteTags (cb)
-  {
-    // Hopefully there are never more than 100 tags..
-    client.get('repos/photonstorm/phaser/git/refs/tags?per_page=100', function (err, response, body)
-    {
-      if (!err && response.statusCode === 200)
-      {
-        var data = body;
-        var builds = [];
-        var i = data.length;
-
-        while (i--)
-        {
-          var item = data[i];
-          if (item['ref'])
-          {
-            var versionName = item['ref'].replace(/^refs\/tags\//, '');
-
-            builds.push({
-              name: versionName,
-              sha: item['object']['sha']
-            });
+            sha: sha,
+            url: util.format("https://cdn.rawgit.com/photonstorm/phaser/%s/build/phaser.js", sha),
+            type: 'branch'
           }
-        }
-
-        cb(null, builds);
-        return;
-      }
-      else
-      {
-        cb(JSON.stringify(body));
-        return;
-      }
-    });
+        });
+      });
   }
 
-  remoteBranches(function (err, branchBuilds)
+  // returns Obs<build_info[]>
+  function remoteTagCollection ()
   {
-    if (err)
-    {
-      cb(err)
-      return;
-    }
+    return getRx('repos/photonstorm/phaser/git/refs/tags?per_page=100')
+      .map(function (r) {
 
-    remoteTags(function (err, tagBuilds)
-    {
-      if (err)
-      {
-        cb(err);
-        return;
-      }
+        var items = r.response.statusCode === 200 ? r.body : [];
+        return items
+          .filter(function (item) {
+            return !!item['ref'];
+          })
+          .map(function (item) {
+            var versionName = item['ref'].replace(/^refs\/tags\//, '');
+            var sha = item['object']['sha'];
+            return {
+              name: versionName,
+              sha: sha,
+              url: util.format("https://cdn.rawgit.com/photonstorm/phaser/%s/build/phaser.js", sha),
+              type: 'tag'
+            }
+          });
+      });
+  }
 
-      var allBuilds = Array.prototype.concat.call([], branchBuilds, tagBuilds);
+  var allCollections = [];
 
+  return Rx.Observable.concat(
+      remoteBranchCollection(),
+      remoteTagCollection()
+    )
+    // Side-effect / save stream when complete
+    .tap(function (x) {
+      allCollections.push(x);
+    })
+    .tapOnCompleted(function () {
+      console.log('Caching remote build information');
+      var allBuilds = Array.prototype.concat.apply([], allCollections); // aka flatMap(identity)
       cache.setKey('remote_builds', allBuilds);
       cache.setKey('remote_builds_fetched_at', +Date.now());
       cache.save();
-
-      cb(null, allBuilds);
+    })
+    .tapOnError(function (err) {
+      console.warn('Failed to get remote information (using cache if available)');
+    })
+    // Use cache if needed
+    .catch(Rx.Observable.from([builds ? builds : []]))
+    // Obs<build_info[]> -> Obs<build_info>
+    .flatMap(function (m) {
+      return m;
     });
-  });
-
 }
 
-function getBuilds (cb)
-{
-  getLocalBuilds(function (err, localBuilds)
-  {
-    if (err)
-    {
-      cb(err);
-      return;
-    }
-    getRemoteBuilds(function (err, remoteBuilds)
-    {
-      if (err)
-      {
-        cb(err);
-        return;
-      }
+function cleanupBuilds (builds) {
+  function flatMap(arr, fn) {
+    return Array.prototype.concat.apply([], arr.map(fn));
+  }
 
-      var allBuilds = Array.prototype.concat.call([], localBuilds, remoteBuilds);
-      cb(null, allBuilds);
+  return flatMap(builds, function (build) {
+      if (build.name === 'v2.4.0') {
+        return [];
+      }
+      if (build.name === 'master') {
+        return [{
+          name: '2.2.2.box2d.min',
+          url: 'http://examples.phaser.io/_site/phaser/phaser.2.2.2.box2d.min.js'
+        }, build]
+      }
+      else {
+        return [build];
+      }
     });
-  });
+}
+
+// returns Obs<build_info[]>
+function getBuilds ()
+{
+  return Rx.Observable
+    .merge(
+      getLocalBuilds(),
+      getRemoteBuilds())
+    .reduce(function (prev, build) {
+      prev.push(build);
+      return prev;
+    }, [])
+    .map(cleanupBuilds);
 }
 
 // Returns a list of the available phaser versions that can
@@ -188,7 +196,7 @@ function getBuilds (cb)
 app.get('/phaser/versions', function (req, res, next)
 {
 
-  getBuilds(function (err, builds)
+  function haveBuilds (err, builds)
   {
     if (!err)
     {
@@ -199,25 +207,19 @@ app.get('/phaser/versions', function (req, res, next)
       next(err);
       return;
     }
-  });
+  }
+
+  getBuilds().toNodeCallback(haveBuilds);
 
 })
 
 function serveLocalPhaserVersion (req, res, next, version)
 {
 
-  var filename = version != null ? "phaser-" + version + ".js" : "phaser.js";
+  var filename = version != null ? util.format("phaser-%s.js", version) : "phaser.js";
   var filePath = path.join(local_root, filename);
 
-  // var stats;
-  // try {
-  //   stats = fs.statSync(filePath);
-  // } catch (e) {
-  //   next(e);
-  //   return;
-  // }
-
-  console.log('Streaming: ' + filePath);
+  console.warn("Serving local phase");
   var readStream = fs.createReadStream(filePath);
 
   readStream.on('error', function (err)
@@ -282,103 +284,129 @@ app.get('/examples/examples.json', function (req, res, next)
 
 });
 
+// relFile - local name of resource, without cache/root path
+// url - resource to fetch if there is no cached copy
+// returns Obs<{file:/*actual file path*/}
+function downloadAndCacheFile (relFile, url) {
+
+  function downloadFile (file, url, cb) {
+    var request = require('request');
+
+    console.warn("Downloading %s from %s", file, url);
+
+    var tempFile = path.join(cache_root, util.format("_%s", uuid.v4()));
+
+    var writeStream = fs.createWriteStream(tempFile);
+
+    writeStream.on('error', function (err) {
+      console.warn("Unable to download file: %s", err);
+
+      try { fs.unlinkSync(tempFile); }
+      catch (e) { /*  Don't care */ }
+
+      cb(err);
+    });
+
+    writeStream.on('finish', function () {
+      console.warn("File downloaded");
+
+      try { fs.renameSync(tempFile, file); }
+      catch (e)
+      {
+        try { fs.unlinkSync(tempFile); }
+        catch (e) { /* Don't care */ }
+      }
+
+      cb(null, file);
+    });
+
+    request(url).pipe(writeStream);
+  }
+
+  return Rx.Observable.of({
+      file: path.join(cache_root, relFile),
+      url: url
+    })
+    .concatMap(function (v) {
+      try {
+        fs.statSync(v.file);
+        // File exists
+        return Rx.Observable.of({
+          file: v.file
+        });
+      }
+      catch (e) {
+        // Download file
+        return Rx.Observable
+          .fromNodeCallback(downloadFile)(v.file, v.url)
+          .share()
+          .map(function (file) {
+            return {
+              file: file
+            }
+          });
+      }
+    });
+}
+
 // Fetch a specific Phaser script version
 // The Phaser Version is ultimately fetched from Git (or perhaps a local path)
 // but cached locally for future offline access.
 //   version: a short version name such as '4.3.1', 'master', or 'local'
 app.get('/phaser/phaser-:version.js', function (req, res, next)
 {
-	var request = require('request');
+  getBuilds()
+    .subscribe(function (builds) {
 
-  getBuilds(function (err, builds)
-  {
-    if (err)
-    {
-      next(err);
-      return;
-    }
+      var versionName = req.params.version;
 
-    var versionName = req.params.version;
+      var m = versionName.match(/^local(?:[.](.*))?$/);
+      if (m) {
+        serveLocalPhaserVersion(req, res, next, m[1]);
+        return;
+      }      
 
-    var m = versionName.match(/^local(?:[.](.*))?$/);
-    if (m)
-    {
-      serveLocalPhaserVersion(req, res, next, m[1]);
-      return;
-    }
-
-    var targetVersion = builds.filter(function (version)
-    {
-      return version.name === versionName;
-    })[0];
-
-    if (!targetVersion)
-    {
-      console.log("No target version found: " + versionName);
-      next("error");
-      return;
-    }
-
-    // The specific SHA is used in the CDN url to avoid stale cahce pulls, mainly with branch names.
-    // The URL could also use the non-CDN rawgit but the SHA information is already available.
-    var targetSha = targetVersion.sha;
-    var phaserUrl = "https://cdn.rawgit.com/photonstorm/phaser/" + targetSha + "/build/phaser.js";
-
-    res.setHeader("X-Origin-Resource", phaserUrl);
-
-    // fs.readFile(path.combine(cache_root, 'phaser-' + targetSha + ".js"), "r", function (err, )
-    var f = path.join(cache_root, "phaser-" + targetSha + ".js");
-
-    var readStream = fs.createReadStream(f);
-    readStream.on('error', function (/* err */)
-    {
-      console.log('error in reading ' + f + " requesting proxy")
-      readStream.unpipe();
-
-      var t = path.join(cache_root, "_" + ((Math.random() * 40000) << 0));
-      // Nope, so try to create
-      var writeStream = fs.createWriteStream(t);
-
-      writeStream.on('error', function (err)
+      var targetBuild = builds.filter(function (version)
       {
-        console.log("Unable to write to cache: %s", err);
+        return version.name === versionName;
+      })[0];
 
-        try { fs.unlinkSync(t); }
-        catch (e) { /*  Don't care */ }
+      if (!targetBuild) {
+        next("No target version found: " + versionName);
+        return;
+      }
 
-        next(err);
-      });
+      // The specific SHA is used in the CDN url to avoid stale cahce pulls, mainly with branch names.
+      // The URL could also use the non-CDN rawgit but the SHA information is already available.
+      var sha = targetBuild.sha;
+      var buildUrl = targetBuild.url;
+      var relFile = sha
+        ? util.format("phaser-%s-%s.js", versionName, sha)
+        : util.format("phaser-%s.js", versionName);
 
-      writeStream.on('finish', function (/* err */)
-      {
+      downloadAndCacheFile(relFile, buildUrl)
+        .take(1) // Should only be 1 ..
+        .subscribe(function (v) {
+          var file = v.file;
 
-        console.log("Remote dowload complete - renaming temp file");
+          console.warn("Serving file: %s", file);
 
-        try { fs.renameSync(t, f); }
-        catch (e)
-        {
-          try { fs.unlinkSync(t); }
-          catch (e) { /* Don't care */ }
-        }
+          var readStream = fs.createReadStream(file);
+          readStream.on('error', function (err) {
+            console.log('error in reading (after fetch)');
+            next(err);
+          });
 
-        var readStream = fs.createReadStream(f);
-        readStream.on('error', function (err)
-        {
-          console.log('error in reading (after fetch)');
+          res.setHeader("X-Origin-Resource", buildUrl);
+          readStream.pipe(res);
+
+        }, function (err) {
           next(err);
         });
 
-        readStream.pipe(res);
-      });
-
-      request(phaserUrl).pipe(writeStream);
-
+    }, function (err) {
+      next(err);
     });
-
-    // Automatically ends request
-    readStream.pipe(res);
-
-  });
 
 });
 

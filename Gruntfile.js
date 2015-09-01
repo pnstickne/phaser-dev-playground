@@ -67,7 +67,7 @@ module.exports = function (grunt) {
       watch: {
         express: {
           files: [
-            '**/*.js',
+            'playground/**/*.js',
             grunt.config('example-path') + '/**/*.js'
           ],
           tasks: ['express'],
