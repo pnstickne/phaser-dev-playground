@@ -45,6 +45,7 @@ module.exports = function (grunt) {
             target: [
               /* 'playground/js/phaser*.js', */
               'Gruntfile.js',
+	      'src/server.js',
               'playground/*.js',
               'playground/js/phaser-viewer.js'
             ]
@@ -59,7 +60,7 @@ module.exports = function (grunt) {
       express: {
         dev: {
           options: {
-            script: 'playground/server.js'
+            script: 'src/server.js'
           }
         }
       },
@@ -67,6 +68,8 @@ module.exports = function (grunt) {
       watch: {
         express: {
           files: [
+            'src/*.js',
+            'playground/*.html',
             'playground/**/*.js',
             grunt.config('example-path') + '/**/*.js'
           ],

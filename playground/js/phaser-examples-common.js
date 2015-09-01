@@ -49,31 +49,6 @@ jQuery(function ($) {
             .replace(/%2f/gi, '/');
     }
 
-    // Build the URL for the example (not HTML-escaped!)
-    function buildOldExampleUrl (exampleData) {
-
-        // The values are already assumed to be encoded, but this might not be valid
-        var exampleDir = exampleData.dir;
-        var exampleFile = exampleData.file || '';
-        var exampleTitle = exampleData.title || '';
-
-        var baseUrl = 'view_full.html';
-        var pairs = [];
-        
-        pairs.push('d=' + exampleDir);
-        pairs.push('f=' + exampleFile);
-        if (exampleData.jsbin) {
-            pairs.push('jsbin=' + exampleData.jsbin);
-        }
-        
-        // Only include the title if it is not trivially recoverable
-        if (exampleTitle && (exampleTitle.replace(/ /g, "+") + ".js") !== exampleFile) {
-            pairs.push('t=' + exampleTitle);
-        }
-
-        return baseUrl + '?' + pairs.join('&');
-    }
-
     function buildNewExampleUrl (exampleData) {
 
         if (!exampleData.name) {
@@ -87,20 +62,11 @@ jQuery(function ($) {
         // The values are not encoded
         var dir = exampleData.dir || '';
         var name = exampleData.name || '';
-        var jsbin = exampleData.jsbin || '';
 
-        var baseUrl = 'view_full.html';
+        var baseUrl = 'examples/view';
         var pairs = [];
 
         pairs.push('path=' + encodeQueryValue(dashEncode(dir + "/" + name)));
-        if (jsbin) {
-            // Only care about the resource/id - the rest can be put in later
-            var m = jsbin.match(/^http:\/\/jsbin.com\/(.*?)\/edit/i);
-            if (m) {
-                jsbin = m[1];
-            }
-            pairs.push('jsbin=' + encodeQueryValue(jsbin));
-        }
         
         return baseUrl + '?' + pairs.join('&');
     }
@@ -167,7 +133,6 @@ jQuery(function ($) {
 
     PhaserExamples.Common = {
         createExampleUrl: buildNewExampleUrl,
-        createOldExampleUrl: buildOldExampleUrl,
         encodeQueryValue: encodeQueryValue,
         getUrlData: getUrlData,
         getExampleBaseUrl: getExampleBaseUrl

@@ -17,10 +17,6 @@ var local_root = path.resolve('local_builds');
 
 app.set('json spaces', 2);
 
-app.get('/', function (req, res) {
-  res.send('Hello World!');
-});
-
 var flatCache = require('flat-cache');
 var cache = flatCache.load('git_api_cache', cache_root);
 
@@ -316,7 +312,7 @@ function getExampleMetadata (root) {
         });
 
     })
-    // Rx<Rx<{group:,fileNames:}>> -> Rx<{group:,fileNames:[]}>
+    // Rx<Rx<{group:,fileNames:[]}>> -> Rx<{group:,fileNames:[]}>
     .mergeAll()
     // Extract example information from filenames
     .map(function (v) {
@@ -327,11 +323,8 @@ function getExampleMetadata (root) {
             var m = name.match(/^(.*)[.]js$/);
             var title = m[1];
 
-            var encodedFilename = encodeURIComponent(name);
-            encodedFilename = encodedFilename.replace(/%20/g, '+');
-
             return {
-              file: encodedFilename,
+              file: name.replace(/ /g, '+'),
               title: title
             };
           })
@@ -501,7 +494,43 @@ var server = app.listen(PORT, function () {
   console.log('  LOCAL_BUILDS: %s', local_root);
 });
 
-app.use('/', express.static(playground_root));
+app.use('/examples/view', function (req, res, next) {
+  var opts = {
+    root: playground_root
+  };
 
+  res.sendFile('view_full.html', opts, function (err) {
+    if (err) {
+      next(err);
+      return;
+    }
+    // Success handled automatically
+    res.end();
+  });
+});
+
+app.use(/\/examples$/, function (req, res, next) {
+  var opts = {
+    root: playground_root
+  };
+
+  res.sendFile('index.html', opts, function (err) {
+    if (err) {
+      next(err);
+      return;
+    }
+    // Success handled automatically
+  });
+});
+
+app.use('/js', express.static(path.join(playground_root, 'js')));
+app.use('/css', express.static(path.join(playground_root, 'css')));
+app.use('/images', express.static(path.join(playground_root, 'images')));
+app.use('/fonts', express.static(path.join(playground_root, 'fonts')));
+
+app.use('/examples/src', express.static(example_root));
 app.use('/assets', express.static(path.join(example_root, 'assets')));
-app.use('/examples', express.static(example_root));
+
+app.use(/\/$/, function (req, res, next) {
+  res.redirect('/examples');
+});

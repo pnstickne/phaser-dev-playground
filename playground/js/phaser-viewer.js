@@ -280,7 +280,7 @@ jQuery(function ($) {
 		}
 
 		$.ajax({
-			url: "examples/" + dir + "/" + file,
+			url: "examples/src/" + dir + "/" + file,
 			dataType: "text"
 		})
 		.done(function (data) {
