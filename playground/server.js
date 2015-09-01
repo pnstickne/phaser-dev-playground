@@ -150,7 +150,7 @@ function getRemoteBuilds ()
       cache.save();
     })
     .tapOnError(function (err) {
-      console.warn('Failed to get remote information (using cache if available)');
+      console.warn('Failed to get remote information (using cache if available): %s', err);
     })
     // Use cache if needed
     .catch(Rx.Observable.from([builds ? builds : []]))
@@ -165,9 +165,6 @@ var target_builds = require('../conf/phaser_builds.json');
 // Given an array of build information return a array of build information.
 // This can include sorting, removing builds, or adding new builds.
 function cleanupBuilds (builds) {
-  function flatMap(arr, fn) {
-    return Array.prototype.concat.apply([], arr.map(fn));
-  }
 
   var buildsByName = {};
   builds.forEach(function (build) {
@@ -194,12 +191,12 @@ function cleanupBuilds (builds) {
     })
     .sort(function (a, b) {
 
-      function cmpDesc(_a, _b) {
+      function cmpDesc (_a, _b) {
         return _a > _b ? -1 : (_b > _a ? 1 : 0);
       }
 
       // Normalize sort information a bit better
-      function d(build) {
+      function d (build) {
         var versionMatch = build.name.match(/(\d+)[.](\d+)(?:[.](\d+))?/);
         return {
           name: build.name,
@@ -207,10 +204,10 @@ function cleanupBuilds (builds) {
             ? util.format("%s-%s-%s",
                 ("00" + versionMatch[1]).slice(-2),
                 ("00" + versionMatch[2]).slice(-2),
-                ("00" + (versionMatch[3]  || '')).slice(-2))
+                ("00" + (versionMatch[3] || '')).slice(-2))
             : "",
           isLocal: build.type === 'local',
-          isBranch: build.type == 'branch'
+          isBranch: build.type === 'branch'
         };
       }
 
@@ -219,13 +216,13 @@ function cleanupBuilds (builds) {
       var x
 
       x = cmpDesc(ax.isLocal, bx.isLocal);
-      if (x) return x;
+      if (x) { return x; }
 
       x = cmpDesc(ax.isBranch, bx.isBranch);
-      if (x) return x;
+      if (x) { return x; }
 
       x = cmpDesc(ax.paddedVersion, bx.paddedVersion);
-      if (x) return x;
+      if (x) { return x; }
 
       return cmpDesc(ax.name, bx.name);
     });
@@ -250,20 +247,15 @@ function getBuilds ()
 app.get('/phaser/versions', function (req, res, next)
 {
 
-  function haveBuilds (err, builds)
-  {
-    if (!err)
-    {
-      res.json({versions: builds});
-    }
-    else
-    {
-      next(err);
-      return;
-    }
-  }
+  getBuilds()
+    .toNodeCallback(function (err, builds) {
+      if (err) {
+        next(err);
+        return;
+      }
 
-  getBuilds().toNodeCallback(haveBuilds);
+      res.json({versions: builds});
+    });
 
 })
 
@@ -286,55 +278,89 @@ function serveLocalPhaserVersion (req, res, next, version)
 
 }
 
-// Scan the example directory and build metadata out of it
-function buildExampleMetadata (root, cb)
-{
+// Returns Rx Observable that scans the example directory and builds metadata out of it.
+function getExampleMetadata (root) {
 
-  var exampleGroups = {};
+  var readdir = Rx.Observable.fromNodeCallback(fs.readdir);
 
-  fs.readdirSync(example_root).forEach(function (name)
-  {
-      var filePath = path.join(example_root, name);
-      var stat = fs.statSync(filePath);
+  return readdir(root)
+    .flatMap(function (groupNames) {
 
-      if (stat.isDirectory() && !name.match(/^[_.]/))
-      {
-        var exampleGroup = [];
-        exampleGroups[name] = exampleGroup;
+      return groupNames
+        .map(function (groupName) {
 
-        fs.readdirSync(filePath).forEach(function (name)
-        {
-          var m = name.match(/^(.*)[.]js$/);
-          if (m)
-          {
+          var groupPath = path.join(root, groupName);
+
+          if (groupName.match(/^[_.]/)
+              || !fs.statSync(groupPath).isDirectory()) {
+            return;
+          }
+
+          return readdir(groupPath)
+            .map(function (fileNames) {
+              return {
+                group: groupName,
+                fileNames: fileNames
+                  .filter(function (name) {
+                    return !!name.match(/.[.]js$/);
+                  })
+              };
+            })
+            .filter(function (group) {
+              return !!group.fileNames.length;
+            });
+
+        })
+        .filter(function (readObs) {
+          return !!readObs;
+        });
+
+    })
+    // Rx<Rx<{group:,fileNames:}>> -> Rx<{group:,fileNames:[]}>
+    .mergeAll()
+    // Extract example information from filenames
+    .map(function (v) {
+      return {
+        group: v.group,
+        examples: v.fileNames
+          .map(function (name) {
+            var m = name.match(/^(.*)[.]js$/);
+            var title = m[1];
+
             var encodedFilename = encodeURIComponent(name);
             encodedFilename = encodedFilename.replace(/%20/g, '+');
-            exampleGroup.push({
-              file: encodedFilename,
-              title: m[1]
-            });
-          }
-        });
-      }
-  });
 
-  cb(null, exampleGroups);
+            return {
+              file: encodedFilename,
+              title: title
+            };
+          })
+      };
+    })
+    // -> Rx<{group:,examples:[]}>
+    // Group examples together
+    .reduce(function (acc, v) {
+      acc[v.group] = v.examples;
+      return acc;
+    }, {});
+
 }
 
 // Fetch/build the example metadata
 app.get('/examples/examples.json', function (req, res, next)
 {
 
-  buildExampleMetadata(example_root, function (err, examples)
-  {
-    if (err)
-    {
+  function exampleMetadataBuilt (err, groups) {
+    if (err) {
       next(err);
       return;
     }
 
-    res.send(examples);
-  });
+    res.json(groups);
+  }
+
+  getExampleMetadata(example_root)
+    .toNodeCallback(exampleMetadataBuilt);
 
 });
 
@@ -418,7 +444,7 @@ app.get('/phaser/phaser-:version.js', function (req, res, next)
       if (m) {
         serveLocalPhaserVersion(req, res, next, m[1]);
         return;
-      }      
+      }
 
       var targetBuild = builds.filter(function (version)
       {

@@ -1,7 +1,8 @@
 'use strict';
 
 /* global window:false, localStorage:false, document:false,
-          jQuery: false, PhaserExamples:false, CodeMirror:false */
+          jQuery: false, PhaserExamples:false, CodeMirror:false,
+          game: false */
 
 jQuery(function ($) {
 
@@ -14,7 +15,11 @@ jQuery(function ($) {
 	var requestedVersion = exampleData.version || defaultVersionTag;
 
 	document.title = 'phaser - ' + title;
+
 	$("#title").append(title);
+	$('#v2link').attr('href',
+		'http://phaser.io/examples/v2/' + dir + '/'
+			+ file.replace(/\+/g, '-').replace(/\s+/, '-').replace(/\.js$/, ''));
 
 	// Return the actual loaded Phaser version - or an empty string
 	function getLoadedPhaserVersion () {
@@ -68,9 +73,12 @@ jQuery(function ($) {
 		});
 
 		$.each(versions, function (codeKey, version) {
+			var title = version.license !== "commercial"
+				? version.name
+				: version.name + " ($)";
 			var option = $("<option></option>")
 				.attr("value", version.name)
-				.text(version.name);
+				.text(title);
 			$dropdown.append(option);
 		});
 
@@ -95,45 +103,6 @@ jQuery(function ($) {
 		.done(function (versions) {
 			displayPhaserVersionSelection(versions, requestedVersion);
 		});
-
-	// Semi-replacement for $.getScript - but it supplies different
-	// information to the promise handlers.
-	// IE9+ only
-	function loadScript (url) {
-		var dfd = new $.Deferred();
-
-		var script = document.createElement('script');
-
-		// "Modern" - FF, Chrome, IE10
-		script.onload = function () {
-			dfd.resolve(script, 'success');
-		};
-
-		// IE9, older Opera perhaps - just double up and listen to all
-		if ('onreadystatechange' in script)
-		{
-			script.onreadystatechange = function () {
-				var rs = script.readyState;
-				if (['complete', 'loaded'].indexOf(rs) > -1) {
-					dfd.resolve(script, 'success');
-				}
-			};
-		}
-
-		script.onerror = function () {
-			dfd.reject(null, null, 'Failed to load');
-			script.parentNode.removeChild(script);
-		};
-
-		script.async = true;
-		script.type = 'text/javascript';
-		script.src = url;
-
-		var head = document.getElementsByTagName("head")[0];
-		head.appendChild(script);
-
-		return dfd;
-	}
 
 	// Use as key into localStore for this example
 	var codeKey = "[" + dir + "/" + file + "]";
@@ -180,7 +149,6 @@ jQuery(function ($) {
 			}
 		};
 
-		//debugger;
 		localStorage.setItem(codeKey, JSON.stringify(data));
 		window.location.reload();
 	}
@@ -280,7 +248,6 @@ jQuery(function ($) {
 			codeEditor.focus();
 		}
 
-		//debugger;
 		evaluateCode(source);
 
 	}
@@ -297,7 +264,6 @@ jQuery(function ($) {
 	function loadAndRunCode ()
 	{
 
-		//debugger;
 		var stored = localStorage.getItem(codeKey);
 		if (stored) {
 			var data;
@@ -321,7 +287,7 @@ jQuery(function ($) {
 			showAndRunCode(data);
 		})
 		.fail(function (jqxhr, settings, exception) {
-			$("#title").text("Error");
+			$("#title").text("Error: " + exception);
 			var node = '<p>Unable to load <u>' + dir + '/' + file + '</u></p>';
 			$('#phaser-example').append(node);
 		});
