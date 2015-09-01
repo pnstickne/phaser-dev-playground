@@ -1,0 +1,46 @@
+{
+    "builds":
+    [
+        {
+            "name": "2.2.2.box2d.min",
+            "url": "http://examples.phaser.io/_site/phaser/phaser.2.2.2.box2d.min.js",
+            "license": "commerical"
+        },
+        {
+            "name": "v2.4.0",
+            "obsolete": true
+        },
+        {
+            "name": "2.1.0",
+            "obsolete": true
+        },
+        {
+            "name": "0.9.7",
+            "obsolete": true
+        },
+        {
+            "name": "0.9.6",
+            "obsolete": true
+        },
+        {
+            "name": "0.9.5",
+            "obsolete": true
+        },
+        {
+            "name": "0.9.4",
+            "obsolete": true
+        },
+        {
+            "name": "0.9.3",
+            "obsolete": true
+        },
+        {
+            "name": "0.9.2",
+            "obsolete": true
+        },
+        {
+            "name": "0.9.1",
+            "obsolete": true
+        }
+    ]
+}

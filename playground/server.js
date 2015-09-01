@@ -15,8 +15,9 @@ var playground_root = path.resolve('playground');
 var cache_root = path.resolve('cache');
 var local_root = path.resolve('local_builds');
 
-app.get('/', function (req, res)
-{
+app.set('json spaces', 2);
+
+app.get('/', function (req, res) {
   res.send('Hello World!');
 });
 
@@ -33,35 +34,35 @@ Rx.Observable.prototype.toNodeCallback = function (cb) {
     function () { cb(null, value); });
 };
 
-// Returns Obs<build_info>
-function getLocalBuilds ()
-{
-  var readdir = Rx.Observable.fromNodeCallback(fs.readdir);
-
-  return readdir(local_root).flatMap(function (names) {
-    return names.map(function (name) {
-      var m = name.match(/^(?:phaser|phaser-(.*))[.]js$/i);
-      if (m)
-      {
-        var localName = m[1] ? 'local.' + m[1] : 'local';
-        return {
-          name: localName,
-          sha: null,
-          type: 'file'
-        };
-      }
-    })
-    .filter(function (build) {
-      return !!build;
-    });
-  });
-}
-
 // build_info:
 // - name
 // - sha (only from git)
 // - type: branch, tag, local, remote
 // - url
+
+// Returns Obs<build_info>
+function getLocalBuilds ()
+{
+  return Rx.Observable
+    .fromNodeCallback(fs.readdir)(local_root)
+    .flatMap(function (names) {
+      return names
+        .map(function (name) {
+          var m = name.match(/^(?:phaser|phaser-(.*))[.]js$/i);
+          if (m)
+          {
+            var localName = m[1] ? 'local.' + m[1] : 'local';
+            return {
+              name: localName,
+              type: 'local'
+            };
+          }
+        })
+        .filter(function (build) {
+          return !!build;
+        });
+    });
+}
 
 // returns Obs<build_info>
 function getRemoteBuilds ()
@@ -80,7 +81,8 @@ function getRemoteBuilds ()
   var request = require('request-json');
   var client = request.createClient('https://api.github.com');
 
-  var getRx = Rx.Observable.fromNodeCallback(client.get, client, function (response, body) {
+  var getRx = Rx.Observable
+    .fromNodeCallback(client.get, client, function (response, body) {
       return {response: response, body: body};
     });
 
@@ -130,10 +132,12 @@ function getRemoteBuilds ()
 
   var allCollections = [];
 
-  return Rx.Observable.concat(
+  return Rx.Observable
+    .zip(
       remoteBranchCollection(),
       remoteTagCollection()
     )
+    .flatMap(function (m) { return m; })
     // Side-effect / save stream when complete
     .tap(function (x) {
       allCollections.push(x);
@@ -156,24 +160,74 @@ function getRemoteBuilds ()
     });
 }
 
+var target_builds = require('../conf/phaser_builds.json');
+
+// Given an array of build information return a array of build information.
+// This can include sorting, removing builds, or adding new builds.
 function cleanupBuilds (builds) {
   function flatMap(arr, fn) {
     return Array.prototype.concat.apply([], arr.map(fn));
   }
 
-  return flatMap(builds, function (build) {
-      if (build.name === 'v2.4.0') {
-        return [];
+  var buildsByName = {};
+  builds.forEach(function (build) {
+    buildsByName[build.name] = build;
+  });
+
+  // Ref. http://stackoverflow.com/a/15040626/2864740
+  var extend = require('util')._extend;
+
+  target_builds.builds.forEach(function (buildConf) {
+    // Add new build as required
+    var build = buildsByName[buildConf.name];
+    if (!build) {
+      build = buildsByName[buildConf.name] = {};
+      builds.push(build);
+    }
+    // Copy over properties (all primitives)
+    extend(build, buildConf);
+  });
+
+  return builds
+    .filter(function (build) {
+      return !build.obsolete;
+    })
+    .sort(function (a, b) {
+
+      function cmpDesc(_a, _b) {
+        return _a > _b ? -1 : (_b > _a ? 1 : 0);
       }
-      if (build.name === 'master') {
-        return [{
-          name: '2.2.2.box2d.min',
-          url: 'http://examples.phaser.io/_site/phaser/phaser.2.2.2.box2d.min.js'
-        }, build]
+
+      // Normalize sort information a bit better
+      function d(build) {
+        var versionMatch = build.name.match(/(\d+)[.](\d+)(?:[.](\d+))?/);
+        return {
+          name: build.name,
+          paddedVersion: versionMatch
+            ? util.format("%s-%s-%s",
+                ("00" + versionMatch[1]).slice(-2),
+                ("00" + versionMatch[2]).slice(-2),
+                ("00" + (versionMatch[3]  || '')).slice(-2))
+            : "",
+          isLocal: build.type === 'local',
+          isBranch: build.type == 'branch'
+        };
       }
-      else {
-        return [build];
-      }
+
+      var ax = d(a);
+      var bx = d(b);
+      var x
+
+      x = cmpDesc(ax.isLocal, bx.isLocal);
+      if (x) return x;
+
+      x = cmpDesc(ax.isBranch, bx.isBranch);
+      if (x) return x;
+
+      x = cmpDesc(ax.paddedVersion, bx.paddedVersion);
+      if (x) return x;
+
+      return cmpDesc(ax.name, bx.name);
     });
 }
 
@@ -200,7 +254,7 @@ app.get('/phaser/versions', function (req, res, next)
   {
     if (!err)
     {
-      res.send({versions: builds});
+      res.json({versions: builds});
     }
     else
     {
