@@ -324,7 +324,7 @@ function getExampleMetadata (root) {
             var title = m[1];
 
             return {
-              file: name.replace(/ /g, '+'),
+              file: name,
               title: title
             };
           })

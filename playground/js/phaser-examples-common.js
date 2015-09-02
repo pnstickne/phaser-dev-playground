@@ -13,35 +13,6 @@ if (!window.PhaserExamples) {
 
 jQuery(function ($) {
 
-    // Encodes standalone spaces as dashes, space-dash-space as dash-dash-dash.
-    // Dashes and spaces that are not encoded (and percent signs) are percent-encoded.
-    function dashEncode (str) {
-        return str.replace(/(?:( - )|(-)|( (?! ))|( )|(%))/g, function (m, a, b, c, d, e) {
-            if (a) { // ( - )
-                return '---';
-            } else if (b) { // (-)
-                return '%2d'
-            } else if (c) { // ( (?! ))
-                return '-';
-            } else if (d) { // ( )
-                return '%20';
-            } else if (e) { // (%)
-                return '%25';
-            }
-        });
-    }
-
-    // The opposite of dashEncode
-    function dashDecode (str) {
-        return str
-            .replace(/---|-/g, function (m) {
-                return m === '---' ? ' - ' : ' ';
-            })
-            .replace(/%2d/g, '-')
-            .replace(/%20/g, ' ')
-            .replace(/%25/g, '%');
-    }
-
     // URI-encodes the string, and then "fixes" some valid query string values
     function encodeQueryValue (str) {
         return encodeURIComponent(str)
@@ -66,7 +37,7 @@ jQuery(function ($) {
         var baseUrl = 'examples/view';
         var pairs = [];
 
-        pairs.push('path=' + encodeQueryValue(dashEncode(dir + "/" + name)));
+        pairs.push('path=' + encodeQueryValue(dir + "/" + name));
         
         return baseUrl + '?' + pairs.join('&');
     }
@@ -99,7 +70,7 @@ jQuery(function ($) {
         else if (path)
         {
             // new-style urls
-            var components = dashDecode(path).split("/", 2);
+            var components = path.split("/", 2);
             dir = components[0];
             name = components[1];
 
