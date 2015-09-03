@@ -128,6 +128,7 @@ jQuery(function ($) {
 		resetCustomCode();
 	});
 
+	showBuildDetails();
 	loadAndRunCode();
 
 	// Store the current code and reload the page
@@ -252,6 +253,22 @@ jQuery(function ($) {
 
 	}
 
+	function showBuildDetails () {
+
+		function addDetail (detail) {
+			$('#build-details').append(
+				$("<li/>").text(detail));
+		}
+
+		var Phaser = window.Phaser;
+		if (!Phaser) {
+			addDetail("Failed to load Phaser");
+			return;
+		}
+
+		addDetail("VER: " + Phaser.VERSION);
+	}
+
 	function showMeta (meta)
 	{
 		if (meta)
@@ -279,7 +296,7 @@ jQuery(function ($) {
 			}
 		}
 
-		$.ajax({
+		return $.ajax({
 			url: "examples/src/" + dir + "/" + file,
 			dataType: "text"
 		})
