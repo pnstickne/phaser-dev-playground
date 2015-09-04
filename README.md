@@ -12,7 +12,7 @@ The Playground is designed to interact well with local [Phaser][phaser] and [Pha
 
 The Playground allows Phaser Examples to be run locally and provides an environment taylored towards development and testing local changes. The Playground is specially designed for working on *local builds* of Phaser or *local modifications* to the Phaser Example repository.
 
-Some of the differences between the online Examples are:
+Some of the differences between the [online Examples][online-examples] (which is a great site, but serves a different role) are:
 
 - Supports *local Phaser builds* - great for expirimenting with core changes
 - Remote Phaser builds are cached for *offline development*
@@ -20,12 +20,13 @@ Some of the differences between the online Examples are:
   - New examples can be added by creating new files/directories
 - *Reduced UI decorations*
   - No social or sharing support
-- *No iframe* is used to hold game content
+- *No iframe* is used to hold/host Game content
 - Phaser is *loaded as a synchronous script*, without XHR
   - Loads *full (non-minified) Phaser builds*
 - *Save/persist example modifications* using browser localStorage
+- The *only* server dependency is Node.js - no PHP or other server required
 
-A local Node.js-Express server is used to host resources to avoid all sorts of ugly CORS issues; the server also takes care of supplying resources in a unified manner, caching external data, and exposing Playground-specific API calls.
+A local Node.js-Express server is used to host resources as it is not feasible to run Phaser off of a 'file:' URL due to CORS issues and security restrictions; the Express server also takes care of supplying resources in a unified manner, caching external data, and exposing Playground-specific API calls.
 
 ## Getting Started
 
@@ -62,13 +63,15 @@ The examples in the Examples repository can also be edited directly on disk. Aft
 
 #### Adding and Removing Examples
 
-To add a new example orremove an existing example just add or remove the file from the linked Example repository (eg. `$/repos/phaser-examples`). The change will be reflected when the example list page is reloaded. Examples can also be renamed or moved.
+To add a new example or remove an existing example just add or remove the file from the linked Example repository (eg. `$/repos/phaser-examples`). The change will be reflected when the example list page is reloaded. Examples can also be renamed or moved.
 
-The Playground lists all example folders and files it finds. Some example categories such as `wip` will show up even though most of these work-in-progress examples are incomplete; such categories are *not* included the online Example site.
+The Playground lists all example folders and files it finds. Some example categories such as `wip` will show up even though most of these "Work In Progress" examples are incomplete; such categories are *not* included the online Example site.
 
-There is no need to manually update any JSON metadata.
+There is no need to manually update any JSON metadata file.
 
-### Using Local Phaser Builds
+### Managing listed Phaser Builds
+
+#### Using Local Phaser Builds
 
 To use a local / custom Phaser build, simply move the built `phaser.js` file into `$/repos/playground/local_builds`. This can be done in an automated fashion when performing a Phaser build by using:
 
@@ -80,6 +83,18 @@ Multiple local builds are supported as long as they are given unique names in th
 
 The new or updated local build will be avialable/used the next time the example page is refreshed.
 
+#### Link a new Remote Build
+
+Edit the `conf/phaser_builds.json` file. Follow the example of the "2.2.2-box2d" build to add a new remote build.
+
+The remote Phaser library is cached the first time it is requested; make sure to clear the `cache` if the remote file changes.
+
+#### Hide an Existing Official Phaser Builder
+
+Official Phaser Builds, as determined by GitHub tags, can be prevented from being listed in the Version selector. This is useful to suppress obsolete/uninteresting builds or known-broken builds. Simply edit the `conf/phaser_buiods.json` file, adding an entry matching the given version Tag as request, and specify `obsolete:true`.
+
+By default there are several version excluded, such as those prior to the 1.0 release.
+
 ### Caching and Offline Access
 
 The `cache` directory is used for various caching purposed. If caching goes terribly wrong then delete the contents of this folder and restart the Playground server.
@@ -90,17 +105,21 @@ Access to the github API, such as when determine the latest Phaser builds, is al
 
 ## Contributing
 
-1. Write some code
+1. Fork the github repository
+
+2. Write code!
 
    - Add a feature, fix a bug, or improve existing code
 
    - Make sure it passes `grunt lint` - "When in Rome.."
 
-2. Submit a Pull Request
+     (if there is a a good reason to ignore a rule, or would like a new rule added, it can be discussed)
+
+3. Submit a Pull Request
 
    - Squash many commits into one (or several) relevant commits
 
-   - Be mindful of feedback
+   - *No good PR refused* - but be mindful of feedback
 
 ## Bugs?
 
