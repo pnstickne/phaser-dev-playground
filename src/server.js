@@ -36,6 +36,8 @@ Rx.Observable.prototype.toNodeCallback = function (cb) {
 // - type: branch, tag, local, remote
 // - url
 
+// Looks in the "local_builds" directory (and subdirectories) to
+// find locally installed/accessible phaser versions.
 // Returns Obs<build_info>
 function getLocalBuilds ()
 {
@@ -44,12 +46,18 @@ function getLocalBuilds ()
     .flatMap(function (names) {
       return names
         .map(function (name) {
-          var m = name.match(/^(?:phaser|phaser-(.*))[.]js$/i);
-          if (m)
+          var file = path.join(local_root, name);          
+          var stat = fs.statSync(file);
+          if (stat.isDirectory())
           {
-            var localName = m[1] ? 'local.' + m[1] : 'local';
+            // Should really grab first phaser.* javascript file..
             return {
-              name: localName,
+              name: 'local.' + name,
+              type: 'local'
+            };
+          } else if (name.match(/^phaser[.]js$/i)) {
+            return {
+              name: 'local',
               type: 'local'
             };
           }
@@ -258,10 +266,10 @@ app.get('/phaser/versions', function (req, res, next)
 function serveLocalPhaserVersion (req, res, next, version)
 {
 
-  var filename = version != null ? util.format("phaser-%s.js", version) : "phaser.js";
+  var filename = version != null ? util.format("%s/phaser.js", version) : "phaser.js";
   var filePath = path.join(local_root, filename);
 
-  console.warn("Serving local phase");
+  console.warn("Serving local phaser: %s", filePath);
   var readStream = fs.createReadStream(filePath);
 
   readStream.on('error', function (err)
@@ -357,7 +365,8 @@ app.get('/examples/examples.json', function (req, res, next)
 
 });
 
-// relFile - local name of resource, without cache/root path
+// relFile - local name of resource relative to the cache/root path
+//           if there is a path portion specified it will be created first
 // url - resource to fetch if there is no cached copy
 // returns Obs<{file:/*actual file path*/}
 function downloadAndCacheFile (relFile, url) {
@@ -366,6 +375,23 @@ function downloadAndCacheFile (relFile, url) {
     var request = require('request');
 
     console.warn("Downloading %s from %s", file, url);
+
+    // probably better to use mkdirp module..
+    // http://stackoverflow.com/questions/13696148/node-js-create-folder-or-use-existing
+    // BROKEN - uses relFile
+    var targetDir = path.dirname(relFile, parseInt("766", 8));
+    if (targetDir) {
+      try {
+        fs.mkdirSync(path.join(cache_root, targetDir));
+      } catch (e) {
+        if (!("" + e).match(/EEXIST/)) {
+          cb(err);
+          return;
+        } else {
+          /* Don't care */
+        }
+      }
+    }
 
     var tempFile = path.join(cache_root, util.format("_%s", uuid.v4()));
 
@@ -426,7 +452,7 @@ function downloadAndCacheFile (relFile, url) {
 // The Phaser Version is ultimately fetched from Git (or perhaps a local path)
 // but cached locally for future offline access.
 //   version: a short version name such as '4.3.1', 'master', or 'local'
-app.get('/phaser/phaser-:version.js', function (req, res, next)
+app.get('/phaser/:version/phaser.js', function (req, res, next)
 {
   getBuilds()
     .subscribe(function (builds) {
@@ -454,8 +480,8 @@ app.get('/phaser/phaser-:version.js', function (req, res, next)
       var sha = targetBuild.sha;
       var buildUrl = targetBuild.url;
       var relFile = sha
-        ? util.format("phaser-%s-%s.js", versionName, sha)
-        : util.format("phaser-%s.js", versionName);
+        ? util.format("%s/phaser-%s.js", versionName, sha)
+        : util.format("%s/phaser.js", versionName);
 
       downloadAndCacheFile(relFile, buildUrl)
         .take(1) // Should only be 1 ..

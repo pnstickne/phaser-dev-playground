@@ -29,7 +29,7 @@
 	    	var query = location.search.substr(1);
 		    var m = query.match(/\bv=(.*?)(?:&|$)/);
             var name = (m && m[1]) || 'master';
-            var phaserUrl = "phaser/phaser-" + name + ".js";
+            var phaserUrl = "phaser/" + name + "/phaser.js";
 		    document.write("<script src='" + phaserUrl + "'></" + "script>");
 	    })();
     </script>

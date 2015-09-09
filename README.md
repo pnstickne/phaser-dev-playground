@@ -79,7 +79,7 @@ To use a local / custom Phaser build, simply move the built `phaser.js` file int
     # Remember: do this in the Phaser repository
     grunt build && cp builds/phaser.js $/repos/playground/local_builds
 
-Multiple local builds are supported as long as they are given unique names in the form `phaser-{some_label}.js`. Because the Playground is designed for development, and debugging of such, there is no support for minified builds or map files.
+Multiple local builds are supported as long if they are put in a subdirectory in the form `some_label/phaser.js`. The "some_label" can be any useful (and filesystem-valid) mnemonic but it should be short. Because the Playground is designed for development, and debugging of such, there is no support for minified builds or map files. See the documentation local_builds/README.md for more details.
 
 The new or updated local build will be avialable/used the next time the example page is refreshed.
 
