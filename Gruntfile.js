@@ -32,6 +32,8 @@ module.exports = function (grunt) {
     }
 
     grunt.loadNpmTasks('grunt-env');
+    grunt.loadNpmTasks('grunt-execute');
+    grunt.loadNpmTasks('grunt-run');
     grunt.loadNpmTasks('grunt-express-server');
     grunt.loadNpmTasks('grunt-contrib-watch');
     grunt.loadNpmTasks('grunt-eslint');
@@ -69,13 +71,13 @@ module.exports = function (grunt) {
         express: {
           files: [
             'src/*.js',
-            'playground/*.html',
-            'playground/**/*.js',
-            grunt.config('example-path') + '/**/*.js'
+            'playground/**',
+            grunt.config('example-path') + '/examples/**/*.js'
           ],
           tasks: ['express'],
           options: {
-            spawn: false
+            spawn: false,
+            interval: 4000
           }
         }
       }

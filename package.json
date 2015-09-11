@@ -37,15 +37,17 @@
     "grunt-env": "^0.4.4",
     "grunt-eslint": "^17.1.0",
     "grunt-express-server": "^0.5.1",
-    "grunt-text-replace": "~0.4.0"
+    "grunt-text-replace": "~0.4.0",
+    "tick": "^0.1.1"
   },
   "dependencies": {
     "express": "^4.13.3",
-    "flat-cache": "^1.0.3",
+    "flat-cache": "^1.0.4",
     "lodash": "~3.10.1",
+    "mustache-express": "^1.2.1",
     "request": "^2.61.0",
     "request-json": "^0.5.3",
-    "rx": "^3.1.1",
+    "rx": "^3.1.2",
     "uuid": "^2.0.1"
   }
 }

@@ -7,6 +7,11 @@
             "license": "commercial"
         },
         {
+            "name": "2.3.1.virtual-joystick.min",
+            "url": "http://examples.phaser.io/_site/phaser/phaser.2.3.1.virtual-joystick.min.js",
+            "license": "commercial"
+        },
+        {
             "name": "v2.4.0",
             "obsolete": true
         },
