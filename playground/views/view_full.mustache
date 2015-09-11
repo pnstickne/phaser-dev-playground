@@ -24,7 +24,7 @@
     <body>
 
     <script>
-    	// Phaser is loaded immediately and synchronously
+    	// Phaser is loaded immediately and synchronously - and watch sucks
     	;(function () {
 	    	var query = location.search.substr(1);
 		    var m = query.match(/\bv=(.*?)(?:&|$)/);
@@ -33,6 +33,10 @@
 		    document.write("<script src='" + phaserUrl + "'></" + "script>");
 	    })();
     </script>
+
+    {{#plugins}}
+    <script src="plugins/{{name}}.js"></script>
+    {{/plugins}}
 
     <script>
         // setTimeout(function () {

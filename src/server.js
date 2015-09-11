@@ -7,15 +7,23 @@ var fs = require('fs');
 var util = require('util');
 var uuid = require('uuid');
 
-var EXAMPLE_PATH = process.env.EXAMPLE_PATH;
-var PORT = process.env.PORT;
+var EXAMPLE_PATH = process.env.EXAMPLE_PATH || '../phaser-examples';
+var PORT = process.env.PORT || '3000';
 
 var example_root = path.join(EXAMPLE_PATH, 'examples');
 var playground_root = path.resolve('playground');
 var cache_root = path.resolve('cache');
 var local_root = path.resolve('local_builds');
 
+var mustacheExpress = require('mustache-express');
+
+app.engine('mustache', mustacheExpress());
+
 app.set('json spaces', 2);
+
+app.set('view engine', 'mustache');
+
+app.set('views', path.join(playground_root, 'views'));
 
 var flatCache = require('flat-cache');
 var cache = flatCache.load('git_api_cache', cache_root);
@@ -525,14 +533,7 @@ app.use('/examples/view', function (req, res, next) {
     root: playground_root
   };
 
-  res.sendFile('view_full.html', opts, function (err) {
-    if (err) {
-      next(err);
-      return;
-    }
-    // Success handled automatically
-    res.end();
-  });
+  res.render('view_full');
 });
 
 app.use(/\/examples$/, function (req, res, next) {
@@ -555,6 +556,7 @@ app.use('/images', express.static(path.join(playground_root, 'images')));
 app.use('/fonts', express.static(path.join(playground_root, 'fonts')));
 
 app.use('/examples/src', express.static(example_root));
+app.use('/_plugins', express.static(path.join(example_root, '_plugins')));
 app.use('/assets', express.static(path.join(example_root, 'assets')));
 
 app.use(/\/$/, function (req, res, next) {
